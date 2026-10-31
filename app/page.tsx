@@ -760,8 +760,7 @@ export default function ActivePetroleumApp() {
               الوكيل المعتمد لزيوت IPT • Quantum • ELF
             </p>
             <p className="mt-1">
-              جميع الحقوق محفوظة © {new Date().getFullYear()} A.Petroleum.
-            </p>
+جميع الحقوق محفوظة © 2026 A.Petroleum.            </p>
           </div>
         </div>
       </footer>
