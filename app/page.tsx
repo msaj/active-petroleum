@@ -13,7 +13,7 @@ export default function ActivePetroleumPro() {
     "GAS": "جاري التحديث..."
   });
 
-  // جلب الأسعار من موقع IPT عند فتح الصفحة
+  // جلب الأسعار من موقع IPT
   useEffect(() => {
     fetch('/api/fuel')
       .then(res => res.json())
@@ -25,7 +25,6 @@ export default function ActivePetroleumPro() {
       .catch(err => console.error("Error fetching prices:", err));
   }, []);
 
-  // دالة لحساب السعر بالدولار تقريبياً (على سعر صرف 89500)
   const getUsdPrice = (lbpPrice: string) => {
     if (lbpPrice === "جاري التحديث..." || lbpPrice === "غير متوفر") return "--";
     const num = parseInt(lbpPrice.replace(/,/g, ''));
@@ -46,52 +45,24 @@ export default function ActivePetroleumPro() {
   const progressPercent = Math.min(100, Math.max(0, ((currentKm - lastOilChangeKm) / oilIntervalKm) * 100));
 
   const fuelPricesData = [
-    {
-      code: "98",
-      name: "بنزين 98 أوكتان",
-      en: "SUPER UNLEADED 98",
-      priceLbp: livePrices["98"],
-      priceUsd: getUsdPrice(livePrices["98"]),
-      accent: "border-l-4 border-l-blue-500",
-    },
-    {
-      code: "95",
-      name: "بنزين 95 أوكتان",
-      en: "PREMIUM UNLEADED 95",
-      priceLbp: livePrices["95"],
-      priceUsd: getUsdPrice(livePrices["95"]),
-      accent: "border-l-4 border-l-emerald-500",
-    },
-    {
-      code: "DIESEL",
-      name: "مازوت أخضر نقي",
-      en: "EURO GREEN DIESEL",
-      priceLbp: livePrices["DIESEL"],
-      priceUsd: getUsdPrice(livePrices["DIESEL"]),
-      accent: "border-l-4 border-l-amber-400",
-    },
-    {
-      code: "GAS",
-      name: "غاز منزلي وتجاري",
-      en: "CERTIFIED LPG 10KG",
-      priceLbp: livePrices["GAS"],
-      priceUsd: getUsdPrice(livePrices["GAS"]),
-      accent: "border-l-4 border-l-cyan-400",
-    }
+    { code: "98", name: "بنزين 98 أوكتان", en: "SUPER UNLEADED 98", priceLbp: livePrices["98"], priceUsd: getUsdPrice(livePrices["98"]), accent: "border-l-4 border-l-blue-500" },
+    { code: "95", name: "بنزين 95 أوكتان", en: "PREMIUM UNLEADED 95", priceLbp: livePrices["95"], priceUsd: getUsdPrice(livePrices["95"]), accent: "border-l-4 border-l-emerald-500" },
+    { code: "DIESEL", name: "مازوت أخضر نقي", en: "EURO GREEN DIESEL", priceLbp: livePrices["DIESEL"], priceUsd: getUsdPrice(livePrices["DIESEL"]), accent: "border-l-4 border-l-amber-400" },
+    { code: "GAS", name: "غاز منزلي وتجاري", en: "CERTIFIED LPG 10KG", priceLbp: livePrices["GAS"], priceUsd: getUsdPrice(livePrices["GAS"]), accent: "border-l-4 border-l-cyan-400" }
   ];
 
   const stationShowcases = [
-    { id: "day", tag: "MINIEH STATION • المنية", title: "محطة نموذجية تعمل بالطاقة الشمسية 24/7", subtitle: "YOUR SATISFACTION IS OUR PRIORITY", desc: "تجهيزات حديثة، مضخات Quantum رقمية عالية الدقة.", img: "/station-day.jpg", gradient: "from-blue-950 via-slate-900 to-amber-950" },
-    { id: "evzone", tag: "EVZONE & NITROGEN", title: "اشحن، انطلق، واحمِ البيئة!", subtitle: "شحن سريع للسيارات الكهربائية + منفاخ نيتروجين", desc: "المنطقة الذكية الأولى في المنية.", img: "/evzone.jpg", gradient: "from-slate-950 via-teal-950 to-cyan-900" },
-    { id: "oils", tag: "ELF • QUANTUM • IPT", title: "Elf Oil — Power in Motion", subtitle: "صالة عرض متكاملة لأفخم الزيوت", desc: "تشكيلة كاملة من زيوت ELF التخليقية مع فحص الفلاتر.", img: "/oils.jpg", gradient: "from-blue-950 via-indigo-950 to-slate-900" },
-    { id: "wash", tag: "VIP CAR CARE", title: "نظافة من الخارج... وقوة من الداخل!", subtitle: "غسيل سيارات احترافي بالفوم النشط", desc: "عناية فائقة بطلاء سيارتك مع نظام بطاقة الولاء.", img: "/wash.jpg", gradient: "from-slate-900 via-blue-950 to-slate-950" },
+    { id: "day", tag: "MINIEH STATION • المنية", title: "محطة نموذجية تعمل بالطاقة الشمسية 24/7", subtitle: "YOUR SATISFACTION IS OUR PRIORITY", desc: "تجهيزات حديثة، مضخات Quantum رقمية عالية الدقة، وصهاريج IPT مجهزة لتلبية المنازل والمؤسسات في المنية والشمال.", img: "/station-day.jpg", gradient: "from-blue-950 via-slate-900 to-amber-950" },
+    { id: "evzone", tag: "EVZONE & NITROGEN", title: "اشحن، انطلق، واحمِ البيئة!", subtitle: "شحن سريع للسيارات الكهربائية + منفاخ نيتروجين للإطارات", desc: "المنطقة الذكية الأولى في المنية: شواحن EVZONE المتطورة وتعبئة الإطارات بغاز النيتروجين النقي.", img: "/evzone.jpg", gradient: "from-slate-950 via-teal-950 to-cyan-900" },
+    { id: "oils", tag: "ELF • QUANTUM • IPT LUBRICANTS", title: "Elf Oil — Power in Motion", subtitle: "صالة عرض متكاملة لأفخم الزيوت الفرنسية والعالمية", desc: "تشكيلة كاملة من زيوت ELF Evolution مع فحص وتبديل الفلاتر بإشراف فنيين مختصين.", img: "/oils.jpg", gradient: "from-blue-950 via-indigo-950 to-slate-900" },
+    { id: "wash", tag: "VIP CAR CARE • العناية بالسيارات", title: "نظافة من الخارج... وقوة من الداخل!", subtitle: "غسيل سيارات احترافي بالفوم النشط والماء المفلتر", desc: "عناية فائقة بطلاء سيارتك والجنوط والمقصورة الداخلية مع نظام بطاقة الولاء الرقمية.", img: "/wash.jpg", gradient: "from-slate-900 via-blue-950 to-slate-950" },
   ];
 
   const lubricants = [
-    { id: 1, brand: "ELF", name: "ELF Evolution 700 STI 10W-40", viscosity: "10W-40", spec: "Semi-Synthetic", carTypes: ["all", "standard_gas", "euro_diesel"], kmRange: "5,000 - 6,000 KM", highlight: "Power in Motion", desc: "الزيت الأشهر في صالة A.Petroleum." },
-    { id: 2, brand: "ELF", name: "ELF Evolution 900 SXR 5W-40", viscosity: "5W-40", spec: "100% Full Synthetic", carTypes: ["all", "modern_gas", "euro_diesel"], kmRange: "8,000 - 10,000 KM", highlight: "للسيارات الحديثة والتيربو", desc: "أعلى درجات الحماية لمحركات البنزين والديزل الحديثة." },
-    { id: 3, brand: "QUANTUM", name: "Quantum X-Treme Ultra 5W-30", viscosity: "5W-30", spec: "Full Synthetic", carTypes: ["all", "modern_gas"], kmRange: "8,000 - 10,000 KM", highlight: "مثالي للهايبرد", desc: "تركيبة متطورة تقلل الاحتكاك وتوفر الوقود." },
-    { id: 4, brand: "IPT", name: "IPT Supralube Heavy Duty 15W-40", viscosity: "15W-40", spec: "Heavy Duty Diesel", carTypes: ["all", "heavy_diesel"], kmRange: "5,000 KM / 250 Hrs", highlight: "للآليات والمولدات", desc: "مخصص لمحركات الديزل الثقيلة والشاحنات." }
+    { id: 1, brand: "ELF", name: "ELF Evolution 700 STI 10W-40", viscosity: "10W-40", spec: "Semi-Synthetic • تكنولوجيا فرنسية", carTypes: ["all", "standard_gas", "euro_diesel"], kmRange: "5,000 - 6,000 KM", highlight: "Power in Motion • الأكثر مبيعاً", desc: "الزيت الأشهر في صالة A.Petroleum، مصمم لحماية المحركات بنظافة فائقة." },
+    { id: 2, brand: "ELF", name: "ELF Evolution 900 SXR 5W-40", viscosity: "5W-40", spec: "100% Full Synthetic • تخليقي بالكامل", carTypes: ["all", "modern_gas", "euro_diesel"], kmRange: "8,000 - 10,000 KM", highlight: "للسيارات الحديثة والتيربو", desc: "أعلى درجات الحماية لمحركات البنزين والديزل الحديثة المزودة بشاحن تيربو." },
+    { id: 3, brand: "QUANTUM", name: "Quantum X-Treme Ultra 5W-30", viscosity: "5W-30", spec: "Full Synthetic • توفير الوقود", carTypes: ["all", "modern_gas"], kmRange: "8,000 - 10,000 KM", highlight: "مثالي للهايبرد والحديث", desc: "تركيبة متطورة تقلل الاحتكاك الداخلي للمحرك وتمنح انطلاقة سلسة." },
+    { id: 4, brand: "IPT", name: "IPT Supralube Heavy Duty 15W-40", viscosity: "15W-40", spec: "Heavy Duty Diesel & Fleet", carTypes: ["all", "heavy_diesel"], kmRange: "5,000 KM / 250 Hrs", highlight: "للآليات والمولدات الكهربائية", desc: "مخصص لمحركات الديزل الثقيلة، الشاحنات، البيك أب، والمولدات." },
   ];
 
   const filteredOils = lubricants.filter((oil) => {
@@ -126,6 +97,8 @@ export default function ActivePetroleumPro() {
             <span className="text-amber-400">IPT OFFICIAL PARTNER</span>
             <span className="text-slate-600">•</span>
             <span className="text-emerald-400">QUANTUM FUELS</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-blue-400">ELF LUBRICANTS</span>
           </div>
         </div>
       </div>
@@ -157,10 +130,9 @@ export default function ActivePetroleumPro() {
         </div>
       </header>
 
-      {/* التوتيم والأسعار الـ LIVE */}
+      {/* القسم الأول: الواجهة والتوتيم المباشر */}
       <section id="totem" className="py-8 sm:py-12 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          
           <div className="lg:col-span-7 flex flex-col justify-between bg-white rounded-[28px] p-6 sm:p-10 border border-slate-200/90 shadow-xs relative overflow-hidden">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -186,7 +158,6 @@ export default function ActivePetroleumPro() {
             </div>
           </div>
 
-          {/* لوحة الأسعار المباشرة */}
           <div className="lg:col-span-5 flex">
             <div className="w-full bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 p-2.5 rounded-[32px] shadow-xl border-2 border-slate-300 relative flex flex-col justify-between">
               <div className="absolute -right-2.5 top-8 bottom-28 w-6 bg-emerald-700 rounded-l-xl border-y-2 border-l-2 border-emerald-400 shadow-md flex items-center justify-center">
@@ -240,13 +211,116 @@ export default function ActivePetroleumPro() {
         </div>
       </section>
 
-      {/* باقي الأقسام مدمجة اختصاراً (الكراج والزيوت) */}
+      {/* القسم الثاني: كراج الزبون الذكي */}
       <section id="garage" className="py-10 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="bg-white rounded-[28px] p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h2 className="text-xl font-black text-[#0B4F9F]">نظام ولاء الزبائن (قيد الربط بقاعدة البيانات)</h2>
-            <button className="bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold">المنصة متصلة بـ IPT Live ✓</button>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <span className="text-[#0B4F9F] font-extrabold text-xs uppercase tracking-wider">DIGITAL VEHICLE PASSPORT</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">سجل سيارتك وبطاقة ولاء الغسيل</h2>
+          </div>
+          <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border-2 border-slate-200 shadow-2xs">
+            <span className="bg-[#0B4F9F] text-white text-xs font-black px-3 py-2 rounded-xl">لوحة السيارة</span>
+            <input type="text" value={plateSearch} onChange={(e) => setPlateSearch(e.target.value)} dir="ltr" className="font-mono-num text-sm font-extrabold text-slate-900 px-3 py-1 w-32 text-center bg-slate-100 rounded-xl focus:outline-none" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* بطاقة تتبع غيار الزيت */}
+          <div className="bg-white rounded-[28px] p-6 sm:p-8 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start gap-4 mb-6">
+                <div>
+                  <span className="bg-blue-50 text-[#0B4F9F] text-xs font-extrabold px-3 py-1 rounded-full border border-blue-200">ELF / IPT LUBRICANT TRACKER</span>
+                  <h3 className="text-xl font-black text-slate-900 mt-2">عدّاد غيار الزيت والفلاتر</h3>
+                </div>
+                <div className="bg-slate-900 text-white px-3.5 py-2 rounded-xl border-2 border-amber-400 text-center" dir="ltr">
+                  <span className="text-[9px] text-amber-400 font-bold block">LEBANON</span>
+                  <span className="font-mono-num text-sm font-extrabold">{plateSearch}</span>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2.5">
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-700">حدّث عداد سيارتك الحالي:</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setCurrentKm((prev) => Math.max(lastOilChangeKm, prev - 500))} className="w-8 h-8 rounded-xl bg-slate-100 font-black text-slate-800 border border-slate-300">-</button>
+                    <span className="font-mono-num text-sm sm:text-base font-extrabold bg-amber-50 border-2 border-[#F5B301] text-slate-900 px-3.5 py-1 rounded-xl" dir="ltr">{currentKm.toLocaleString()} KM</span>
+                    <button onClick={() => setCurrentKm((prev) => prev + 500)} className="w-8 h-8 rounded-xl bg-slate-100 font-black text-slate-800 border border-slate-300">+</button>
+                  </div>
+                </div>
+
+                <div className="w-full h-3.5 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                  <div className={`h-full rounded-full transition-all ${remainingKm <= 500 ? "bg-red-600" : remainingKm <= 1200 ? "bg-[#F5B301]" : "bg-emerald-600"}`} style={{ width: `${progressPercent}%` }}></div>
+                </div>
+
+                <div className="flex justify-between items-center text-xs font-extrabold mt-2.5">
+                  <span className="text-slate-500">الغيار القادم: <strong className="font-mono-num text-slate-900" dir="ltr">{nextOilChangeKm.toLocaleString()} KM</strong></span>
+                  <span className={remainingKm <= 500 ? "text-red-600" : "text-emerald-700"}>{remainingKm > 0 ? `متبقي ${remainingKm.toLocaleString()} كم` : "حان موعد غيار الزيت!"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* بطاقة ولاء الغسيل */}
+          <div className="bg-gradient-to-br from-[#0A192F] via-[#0B2545] to-[#071120] text-white rounded-[28px] p-6 sm:p-8 border border-slate-800 shadow-md flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start gap-4 mb-5">
+                <div>
+                  <span className="bg-[#F5B301] text-slate-950 text-xs font-black px-3 py-1 rounded-full">نظافة من الخارج... وقوة من الداخل!</span>
+                  <h3 className="text-xl font-black text-white mt-2.5">بطاقة ولاء الغسيل (VIP Wash)</h3>
+                </div>
+                <div className="bg-white/10 border border-white/15 px-4 py-2 rounded-2xl text-center">
+                  <span className="font-mono-num text-2xl font-extrabold text-[#F5B301]">{washCount}/5</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 my-6">
+                {[1, 2, 3, 4, 5].map((stamp) => (
+                  <div key={stamp} className={`rounded-2xl p-3 flex flex-col items-center justify-center border-2 transition ${stamp <= washCount ? "bg-emerald-500/20 border-emerald-400 text-white" : "bg-white/5 border-white/10 text-slate-400"}`}>
+                    <span className="font-mono-num text-base font-extrabold">{stamp <= washCount ? "✓" : `0${stamp}`}</span>
+                  </div>
+                ))}
+                <div className={`rounded-2xl p-3 flex flex-col items-center justify-center border-2 transition ${washCount >= 5 ? "bg-[#F5B301] text-slate-950 border-white" : "bg-[#F5B301]/15 border-[#F5B301]/50 text-[#F5B301]"}`}>
+                  <span className="text-base font-black">★</span>
+                </div>
+              </div>
+              <button onClick={() => setWashCount((prev) => (prev < 5 ? prev + 1 : 0))} className="w-full bg-white/15 text-white px-3 py-2 rounded-xl font-extrabold text-xs mt-2">
+                 + إضافة ختم تجريبي
+              </button>
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* القسم الثالث: صالة الزيوت */}
+      <section id="lubricants" className="py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="bg-white rounded-[28px] p-6 sm:p-10 border border-slate-200/90 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+            <div>
+              <span className="text-[#0B4F9F] font-extrabold text-xs uppercase tracking-wider">ELF OIL • POWER IN MOTION</span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">صالة الزيوت المعتمدة</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["ALL", "ELF", "QUANTUM", "IPT"].map((brand) => (
+                <button key={brand} onClick={() => setSelectedBrand(brand)} className={`px-4 py-2 rounded-xl text-xs font-black transition ${selectedBrand === brand ? "bg-[#0B4F9F] text-white" : "bg-slate-100 text-slate-700"}`}>
+                  {brand === "ALL" ? "جميع الماركات" : brand}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredOils.map((oil) => (
+              <div key={oil.id} className="rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">{oil.name}</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-2">{oil.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }
