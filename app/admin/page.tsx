@@ -9,8 +9,9 @@ function AdminPanel() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [newKm, setNewKm] = useState("");
   
-  // State jdide la naw3 l-khedme (Service Type)
-  const [serviceType, setServiceType] = useState("full_oil");
+  // State jadide lal zrar l-saree3a
+  const [serviceType, setServiceType] = useState("oil_only");
+  const [otherService, setOtherService] = useState("add_1l");
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -87,7 +88,6 @@ function AdminPanel() {
     setLoading(true);
     
     try {
-      // Houn fina ba3den nzid l-serviceType 3al webhook taba3 Make.com
       await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
         method: 'PATCH',
         headers: {
@@ -99,8 +99,9 @@ function AdminPanel() {
       });
       setCustomer({ ...customer, current_km: parseInt(newKm) });
       
-      // Risalet l-naja7 btbayan naw3 l-khedme
-      setMessage({ text: `تم تسجيل الخدمة وتحديث العداد بنجاح!`, type: "success" });
+      let serviceName = serviceType === "oil_only" ? "غيار زيت" : serviceType === "oil_filter" ? "زيت مع فلتر" : "خدمات أخرى";
+
+      setMessage({ text: `تم تسجيل خدمة (${serviceName}) وتحديث العداد بنجاح!`, type: "success" });
       setNewKm("");
     } catch (err) {
       setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
@@ -178,46 +179,82 @@ function AdminPanel() {
               <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
                 <h3 className="font-black text-amber-800 mb-3">سجل الزيوت والخدمات</h3>
                 
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-bold text-slate-600">آخر عداد:</span>
-                  <span className="font-black text-slate-900" dir="ltr">{customer.current_km.toLocaleString()} KM</span>
+                <div className="flex justify-between items-center mb-5">
+                  <span className="text-sm font-bold text-slate-600">آخر عداد للسيارة:</span>
+                  <span className="font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-amber-200" dir="ltr">
+                    {customer.current_km.toLocaleString()} KM
+                  </span>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Dropdown Menu lal Khedamat */}
-                  <select 
-                    value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value)}
-                    className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 outline-none focus:border-amber-400 cursor-pointer"
-                  >
-                    <option value="full_oil">غيار زيت كامل</option>
-                    <option value="filter">غيار فلتر فقط</option>
-                    <option value="add_1l">إضافة 1 كيلو زيت</option>
-                    <option value="add_2l">إضافة 2 كيلو زيت</option>
-                    <option value="add_3l">إضافة 3 كيلو زيت</option>
-                    <option value="add_4l">إضافة 4 كيلو زيت</option>
-                    <option value="other">خدمات أخرى...</option>
-                  </select>
-
-                  <div className="flex gap-2">
-                    <input 
-                      type="number" 
-                      placeholder="العداد الجديد..." 
-                      value={newKm}
-                      onChange={(e) => setNewKm(e.target.value)}
-                      className="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2 font-bold text-center outline-none focus:border-amber-400"
-                      dir="ltr"
-                    />
+                <div className="space-y-4">
+                  
+                  {/* Zrar l-Khedamat l-Saree3a (Buttons) */}
+                  <div className="bg-white p-3 rounded-xl border border-amber-200">
+                    <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">1. اختر الخدمة:</span>
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <button 
+                        onClick={() => setServiceType("oil_only")}
+                        className={`py-2.5 px-2 rounded-xl font-black text-sm border-2 transition ${serviceType === "oil_only" ? "bg-[#0B4F9F] text-white border-[#0B4F9F] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}
+                      >
+                        غيار زيت 🛢️
+                      </button>
+                      <button 
+                        onClick={() => setServiceType("oil_filter")}
+                        className={`py-2.5 px-2 rounded-xl font-black text-sm border-2 transition ${serviceType === "oil_filter" ? "bg-[#0B4F9F] text-white border-[#0B4F9F] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}
+                      >
+                        زيت + فلتر ⚙️
+                      </button>
+                    </div>
+                    
                     <button 
-                      onClick={updateOil}
-                      disabled={loading}
-                      className="bg-[#F5B301] text-slate-900 px-4 py-2 rounded-xl font-black shadow-md"
+                      onClick={() => setServiceType("other")}
+                      className={`w-full py-2.5 px-3 rounded-xl font-black text-sm border-2 transition flex justify-between items-center ${serviceType === "other" ? "bg-amber-100 text-amber-900 border-amber-400 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200"}`}
                     >
-                      تسجيل الخدمة
+                      <span>خدمات أخرى (Others) ➕</span>
+                      <span className="text-[10px]">{serviceType === "other" ? "▼" : "▶"}</span>
                     </button>
+
+                    {/* La2i7at l-Others (Btebayan bas lama tekbos Others) */}
+                    {serviceType === "other" && (
+                      <div className="mt-2 animate-fade-in">
+                        <select 
+                          value={otherService}
+                          onChange={(e) => setOtherService(e.target.value)}
+                          className="w-full bg-slate-50 border-2 border-amber-300 rounded-xl px-3 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-500"
+                        >
+                          <option value="add_1l">إضافة 1 كيلو زيت</option>
+                          <option value="add_2l">إضافة 2 كيلو زيت</option>
+                          <option value="add_3l">إضافة 3 كيلو زيت</option>
+                          <option value="filter_only">تغيير فلتر فقط</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Idkhal l-KM w l-7ofoz */}
+                  <div className="pt-1">
+                    <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">2. حدّث العداد:</span>
+                    <div className="flex gap-2">
+                      <input 
+                        type="number" 
+                        placeholder="العداد الجديد..." 
+                        value={newKm}
+                        onChange={(e) => setNewKm(e.target.value)}
+                        className="flex-1 bg-white border-2 border-amber-200 rounded-xl px-3 py-2 font-black text-center text-lg outline-none focus:border-[#F5B301] shadow-inner"
+                        dir="ltr"
+                      />
+                      <button 
+                        onClick={updateOil}
+                        disabled={loading}
+                        className="bg-[#F5B301] text-slate-900 px-5 py-2 rounded-xl font-black text-lg shadow-md hover:bg-amber-400 transition"
+                      >
+                        حفظ ✓
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
-                
               </div>
 
             </div>
