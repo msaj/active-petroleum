@@ -8,11 +8,13 @@ function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [newKm, setNewKm] = useState("");
+  
+  // State jdide la naw3 l-khedme (Service Type)
+  const [serviceType, setServiceType] = useState("full_oil");
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // قراءة رقم اللوحة من الـ QR Code مباشرة (إذا كان موجود بالرابط)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const plateParam = params.get("plate");
@@ -54,9 +56,8 @@ function AdminPanel() {
     let newCount = customer.wash_count + 1;
     let alertMsg = "تم إضافة ختم غسيل بنجاح!";
     
-    // إذا وصل للغسلة السادسة
     if (newCount >= 6) {
-      newCount = 0; // تصفير العداد بعد الغسلة المجانية
+      newCount = 0; 
       alertMsg = "مبروك! هذه الغسلة مجانية بالكامل. تم تصفير العداد للبدء من جديد.";
     }
 
@@ -79,10 +80,14 @@ function AdminPanel() {
   };
 
   const updateOil = async () => {
-    if (!customer || !newKm) return;
+    if (!customer || !newKm) {
+        setMessage({ text: "الرجاء إدخال العداد الجديد أولاً.", type: "error" });
+        return;
+    }
     setLoading(true);
     
     try {
+      // Houn fina ba3den nzid l-serviceType 3al webhook taba3 Make.com
       await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
         method: 'PATCH',
         headers: {
@@ -93,7 +98,9 @@ function AdminPanel() {
         body: JSON.stringify({ current_km: parseInt(newKm), last_visit: new Date().toISOString() })
       });
       setCustomer({ ...customer, current_km: parseInt(newKm) });
-      setMessage({ text: "تم تحديث عداد الزيت بنجاح!", type: "success" });
+      
+      // Risalet l-naja7 btbayan naw3 l-khedme
+      setMessage({ text: `تم تسجيل الخدمة وتحديث العداد بنجاح!`, type: "success" });
       setNewKm("");
     } catch (err) {
       setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
@@ -117,7 +124,7 @@ function AdminPanel() {
               placeholder="رقم اللوحة (مثال: M 458921)" 
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
-              className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-black text-center text-slate-900 outline-none focus:border-[#0B4F9F] transition"
+              className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-black text-center text-slate-900 outline-none focus:border-[#0B4F9F] transition uppercase"
               dir="ltr"
             />
             <button 
@@ -137,7 +144,7 @@ function AdminPanel() {
 
           {customer && (
             <div className="space-y-6 animate-fade-in">
-              {/* بطاقة معلومات السيارة */}
+              {/* Bataka M3loumat l-Siyara */}
               <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-inner">
                 <div className="text-amber-400 text-[10px] font-black tracking-widest uppercase mb-1">VIP Customer</div>
                 <div className="text-2xl font-black tracking-widest border-b border-slate-700 pb-3 mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }} dir="ltr">
@@ -149,7 +156,7 @@ function AdminPanel() {
                 </div>
               </div>
 
-              {/* تحكم الغسيل */}
+              {/* T7akkom l-Ghasil */}
               <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-5">
                 <h3 className="font-black text-[#0B4F9F] mb-3">ولاء الغسيل (VIP Wash)</h3>
                 <div className="flex justify-between items-center mb-4">
@@ -167,30 +174,50 @@ function AdminPanel() {
                 </button>
               </div>
 
-              {/* تحكم الزيت */}
+              {/* T7akkom l-Zayt w l-Khedamat */}
               <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
-                <h3 className="font-black text-amber-800 mb-3">سجل الزيوت والفلاتر</h3>
+                <h3 className="font-black text-amber-800 mb-3">سجل الزيوت والخدمات</h3>
+                
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm font-bold text-slate-600">آخر عداد:</span>
                   <span className="font-black text-slate-900" dir="ltr">{customer.current_km.toLocaleString()} KM</span>
                 </div>
-                <div className="flex gap-2">
-                  <input 
-                    type="number" 
-                    placeholder="العداد الجديد..." 
-                    value={newKm}
-                    onChange={(e) => setNewKm(e.target.value)}
-                    className="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2 font-bold text-center outline-none focus:border-amber-400"
-                    dir="ltr"
-                  />
-                  <button 
-                    onClick={updateOil}
-                    disabled={loading}
-                    className="bg-[#F5B301] text-slate-900 px-4 py-2 rounded-xl font-black shadow-md"
+
+                <div className="space-y-3">
+                  {/* Dropdown Menu lal Khedamat */}
+                  <select 
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value)}
+                    className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2.5 font-bold text-slate-800 outline-none focus:border-amber-400 cursor-pointer"
                   >
-                    تحديث
-                  </button>
+                    <option value="full_oil">غيار زيت كامل</option>
+                    <option value="filter">غيار فلتر فقط</option>
+                    <option value="add_1l">إضافة 1 كيلو زيت</option>
+                    <option value="add_2l">إضافة 2 كيلو زيت</option>
+                    <option value="add_3l">إضافة 3 كيلو زيت</option>
+                    <option value="add_4l">إضافة 4 كيلو زيت</option>
+                    <option value="other">خدمات أخرى...</option>
+                  </select>
+
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" 
+                      placeholder="العداد الجديد..." 
+                      value={newKm}
+                      onChange={(e) => setNewKm(e.target.value)}
+                      className="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2 font-bold text-center outline-none focus:border-amber-400"
+                      dir="ltr"
+                    />
+                    <button 
+                      onClick={updateOil}
+                      disabled={loading}
+                      className="bg-[#F5B301] text-slate-900 px-4 py-2 rounded-xl font-black shadow-md"
+                    >
+                      تسجيل الخدمة
+                    </button>
+                  </div>
                 </div>
+                
               </div>
 
             </div>
@@ -201,7 +228,6 @@ function AdminPanel() {
   );
 }
 
-// التغليف بـ Suspense لمنع أخطاء الـ Build في Next.js عند قراءة الرابط
 export default function AdminPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black">جاري التحميل...</div>}>
