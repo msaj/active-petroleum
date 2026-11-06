@@ -9,7 +9,12 @@ function AdminPanel() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [newKm, setNewKm] = useState("");
   
-  // State jadide lal zrar l-saree3a
+  // State l-Ghasil (Wash Type)
+  const [washType, setWashType] = useState("normal");
+
+  // State l-Zayt (Oil Details)
+  const [oilBrand, setOilBrand] = useState("ELF");
+  const [oilGrade, setOilGrade] = useState("10W-40");
   const [serviceType, setServiceType] = useState("oil_only");
   const [otherService, setOtherService] = useState("add_1l");
 
@@ -42,6 +47,14 @@ function AdminPanel() {
       
       if (data && data.length > 0) {
         setCustomer(data[0]);
+        // Eza fi zayt msajjal abel, mn7otto bl state la nbayan-ho
+        if (data[0].oil_type) {
+            const parts = data[0].oil_type.split(" ");
+            if(parts.length >= 2) {
+                setOilBrand(parts[0]);
+                setOilGrade(parts[1]);
+            }
+        }
       } else {
         setMessage({ text: "السيارة غير مسجلة بالنظام. يرجى تسجيلها أولاً.", type: "error" });
       }
@@ -51,16 +64,15 @@ function AdminPanel() {
     setLoading(false);
   };
 
-  const updateWashCount = async () => {
+  // Tasjil l-Ghasil (Bedoun 3added)
+  const submitWash = async () => {
     if (!customer) return;
     setLoading(true);
-    let newCount = customer.wash_count + 1;
-    let alertMsg = "تم إضافة ختم غسيل بنجاح!";
     
-    if (newCount >= 6) {
-      newCount = 0; 
-      alertMsg = "مبروك! هذه الغسلة مجانية بالكامل. تم تصفير العداد للبدء من جديد.";
-    }
+    let washName = 
+      washType === "normal" ? "غسيل عادي" : 
+      washType === "rafe3" ? "غسيل ورافع (من تحت)" : 
+      washType === "moteur" ? "غسيل مع موتور" : "غسيل VIP شامل";
 
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
@@ -70,23 +82,26 @@ function AdminPanel() {
           'apikey': SUPABASE_KEY || "",
           'Authorization': `Bearer ${SUPABASE_KEY}`
         },
-        body: JSON.stringify({ wash_count: newCount, last_visit: new Date().toISOString() })
+        body: JSON.stringify({ last_visit: new Date().toISOString() })
       });
-      setCustomer({ ...customer, wash_count: newCount });
-      setMessage({ text: alertMsg, type: "success" });
+      
+      setMessage({ text: `تم تسجيل (${washName}) بنجاح!`, type: "success" });
     } catch (err) {
       setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
     }
     setLoading(false);
   };
 
+  // Tasjil l-Zayt w l-KM
   const updateOil = async () => {
     if (!customer || !newKm) {
-        setMessage({ text: "الرجاء إدخال العداد الجديد أولاً.", type: "error" });
+        setMessage({ text: "الرجاء إدخال العداد الجديد (KM) أولاً.", type: "error" });
         return;
     }
     setLoading(true);
     
+    const fullOilString = `${oilBrand} ${oilGrade}`;
+
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
         method: 'PATCH',
@@ -95,13 +110,18 @@ function AdminPanel() {
           'apikey': SUPABASE_KEY || "",
           'Authorization': `Bearer ${SUPABASE_KEY}`
         },
-        body: JSON.stringify({ current_km: parseInt(newKm), last_visit: new Date().toISOString() })
+        body: JSON.stringify({ 
+            current_km: parseInt(newKm), 
+            oil_type: fullOilString,
+            last_visit: new Date().toISOString() 
+        })
       });
-      setCustomer({ ...customer, current_km: parseInt(newKm) });
+      
+      setCustomer({ ...customer, current_km: parseInt(newKm), oil_type: fullOilString });
       
       let serviceName = serviceType === "oil_only" ? "غيار زيت" : serviceType === "oil_filter" ? "زيت مع فلتر" : "خدمات أخرى";
 
-      setMessage({ text: `تم تسجيل خدمة (${serviceName}) وتحديث العداد بنجاح!`, type: "success" });
+      setMessage({ text: `تم تسجيل (${serviceName}) وتحديث العداد بنجاح!`, type: "success" });
       setNewKm("");
     } catch (err) {
       setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
@@ -114,11 +134,12 @@ function AdminPanel() {
       <div className="max-w-md mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-slate-200">
         
         <div className="bg-[#071120] p-6 text-center border-b-4 border-[#F5B301]">
-          <h1 className="text-2xl font-black text-white">لوحة الموظفين المخفية</h1>
+          <h1 className="text-2xl font-black text-white">لوحة الموظفين</h1>
           <p className="text-amber-400 text-xs mt-1 font-bold">A.Petroleum VIP System</p>
         </div>
 
         <div className="p-6">
+          {/* Ba7ess 3an sayara */}
           <div className="flex gap-2 mb-6">
             <input 
               type="text" 
@@ -147,116 +168,139 @@ function AdminPanel() {
             <div className="space-y-6 animate-fade-in">
               {/* Bataka M3loumat l-Siyara */}
               <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-inner">
-                <div className="text-amber-400 text-[10px] font-black tracking-widest uppercase mb-1">VIP Customer</div>
-                <div className="text-2xl font-black tracking-widest border-b border-slate-700 pb-3 mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }} dir="ltr">
-                  {customer.plate_number}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-amber-400 text-[10px] font-black tracking-widest uppercase mb-1">VIP Customer</div>
+                    <div className="text-2xl font-black tracking-widest border-b border-slate-700 pb-3 mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }} dir="ltr">
+                      {customer.plate_number}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm font-bold">
+                <div className="flex justify-between items-center text-sm font-bold border-b border-slate-700 pb-2 mb-2">
                   <span className="text-slate-400">آخر زيارة:</span>
                   <span>{new Date(customer.last_visit).toLocaleDateString('en-GB')}</span>
                 </div>
+                <div className="flex justify-between items-center text-sm font-bold">
+                  <span className="text-slate-400">آخر زيت مستخدم:</span>
+                  <span className="text-amber-400" dir="ltr">{customer.oil_type || "غير محدد"}</span>
+                </div>
               </div>
 
-              {/* T7akkom l-Ghasil */}
+              {/* قسم الغسيل المطور */}
               <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-5">
-                <h3 className="font-black text-[#0B4F9F] mb-3">ولاء الغسيل (VIP Wash)</h3>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-bold text-slate-600">رصيد الأختام الحالي:</span>
-                  <span className="bg-white border-2 border-[#F5B301] text-slate-900 px-3 py-1 rounded-lg font-black text-lg">
-                    {customer.wash_count} / 5
-                  </span>
+                <h3 className="font-black text-[#0B4F9F] mb-3">خدمة الغسيل (Car Wash)</h3>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <button onClick={() => setWashType("normal")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "normal" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
+                    غسيل عادي 🚙
+                  </button>
+                  <button onClick={() => setWashType("rafe3")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "rafe3" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
+                    غسيل ورافع ⬆️
+                  </button>
+                  <button onClick={() => setWashType("moteur")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "moteur" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
+                    مع موتور ⚙️
+                  </button>
+                  <button onClick={() => setWashType("full_vip")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "full_vip" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
+                    VIP شامل ✨
+                  </button>
                 </div>
+
                 <button 
-                  onClick={updateWashCount}
+                  onClick={submitWash}
                   disabled={loading}
                   className="w-full bg-[#0B4F9F] hover:bg-[#083B78] text-white py-3 rounded-xl font-black text-lg shadow-md transition"
                 >
-                  + إضافة ختم غسيل 🧼
+                  تسجيل الغسيل ✓
                 </button>
               </div>
 
-              {/* T7akkom l-Zayt w l-Khedamat */}
+              {/* قسم الزيوت المطور */}
               <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
-                <h3 className="font-black text-amber-800 mb-3">سجل الزيوت والخدمات</h3>
+                <h3 className="font-black text-amber-800 mb-3">الزيوت والخدمات</h3>
                 
-                <div className="flex justify-between items-center mb-5">
-                  <span className="text-sm font-bold text-slate-600">آخر عداد للسيارة:</span>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-bold text-slate-600">آخر عداد:</span>
                   <span className="font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-amber-200" dir="ltr">
                     {customer.current_km.toLocaleString()} KM
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  
-                  {/* Zrar l-Khedamat l-Saree3a (Buttons) */}
-                  <div className="bg-white p-3 rounded-xl border border-amber-200">
-                    <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">1. اختر الخدمة:</span>
+                {/* Marka w Raqem l-Zayt */}
+                <div className="bg-white p-3 rounded-xl border border-amber-200 mb-4">
+                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">1. نوع الزيت:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={oilBrand} onChange={(e) => setOilBrand(e.target.value)} className="bg-slate-50 border-2 border-amber-100 rounded-lg px-2 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-400" dir="ltr">
+                      <option value="ELF">ELF</option>
+                      <option value="TOTAL">TOTAL</option>
+                      <option value="QUANTUM">QUANTUM</option>
+                      <option value="IPT">IPT</option>
+                      <option value="CASTROL">CASTROL</option>
+                      <option value="LIQUI_MOLY">LIQUI MOLY</option>
+                    </select>
                     
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <button 
-                        onClick={() => setServiceType("oil_only")}
-                        className={`py-2.5 px-2 rounded-xl font-black text-sm border-2 transition ${serviceType === "oil_only" ? "bg-[#0B4F9F] text-white border-[#0B4F9F] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}
-                      >
-                        غيار زيت 🛢️
-                      </button>
-                      <button 
-                        onClick={() => setServiceType("oil_filter")}
-                        className={`py-2.5 px-2 rounded-xl font-black text-sm border-2 transition ${serviceType === "oil_filter" ? "bg-[#0B4F9F] text-white border-[#0B4F9F] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}
-                      >
-                        زيت + فلتر ⚙️
-                      </button>
-                    </div>
-                    
-                    <button 
-                      onClick={() => setServiceType("other")}
-                      className={`w-full py-2.5 px-3 rounded-xl font-black text-sm border-2 transition flex justify-between items-center ${serviceType === "other" ? "bg-amber-100 text-amber-900 border-amber-400 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200"}`}
-                    >
-                      <span>خدمات أخرى (Others) ➕</span>
-                      <span className="text-[10px]">{serviceType === "other" ? "▼" : "▶"}</span>
-                    </button>
-
-                    {/* La2i7at l-Others (Btebayan bas lama tekbos Others) */}
-                    {serviceType === "other" && (
-                      <div className="mt-2 animate-fade-in">
-                        <select 
-                          value={otherService}
-                          onChange={(e) => setOtherService(e.target.value)}
-                          className="w-full bg-slate-50 border-2 border-amber-300 rounded-xl px-3 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-500"
-                        >
-                          <option value="add_1l">إضافة 1 كيلو زيت</option>
-                          <option value="add_2l">إضافة 2 كيلو زيت</option>
-                          <option value="add_3l">إضافة 3 كيلو زيت</option>
-                          <option value="filter_only">تغيير فلتر فقط</option>
-                        </select>
-                      </div>
-                    )}
+                    <select value={oilGrade} onChange={(e) => setOilGrade(e.target.value)} className="bg-slate-50 border-2 border-amber-100 rounded-lg px-2 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-400" dir="ltr">
+                      <option value="0W-20">0W-20</option>
+                      <option value="5W-30">5W-30</option>
+                      <option value="5W-40">5W-40</option>
+                      <option value="10W-40">10W-40</option>
+                      <option value="15W-40">15W-40</option>
+                      <option value="20W-50">20W-50</option>
+                    </select>
                   </div>
-
-                  {/* Idkhal l-KM w l-7ofoz */}
-                  <div className="pt-1">
-                    <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">2. حدّث العداد:</span>
-                    <div className="flex gap-2">
-                      <input 
-                        type="number" 
-                        placeholder="العداد الجديد..." 
-                        value={newKm}
-                        onChange={(e) => setNewKm(e.target.value)}
-                        className="flex-1 bg-white border-2 border-amber-200 rounded-xl px-3 py-2 font-black text-center text-lg outline-none focus:border-[#F5B301] shadow-inner"
-                        dir="ltr"
-                      />
-                      <button 
-                        onClick={updateOil}
-                        disabled={loading}
-                        className="bg-[#F5B301] text-slate-900 px-5 py-2 rounded-xl font-black text-lg shadow-md hover:bg-amber-400 transition"
-                      >
-                        حفظ ✓
-                      </button>
-                    </div>
-                  </div>
-
                 </div>
-              </div>
 
+                {/* Naw3 L-Khedme */}
+                <div className="bg-white p-3 rounded-xl border border-amber-200 mb-4">
+                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">2. الخدمة المقدمة:</span>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <button onClick={() => setServiceType("oil_only")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${serviceType === "oil_only" ? "bg-[#F5B301] text-slate-900 border-[#F5B301] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                      غيار زيت 🛢️
+                    </button>
+                    <button onClick={() => setServiceType("oil_filter")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${serviceType === "oil_filter" ? "bg-[#F5B301] text-slate-900 border-[#F5B301] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                      زيت + فلتر ⚙️
+                    </button>
+                  </div>
+                  
+                  <button onClick={() => setServiceType("other")} className={`w-full py-2 px-3 rounded-xl font-black text-xs border-2 transition flex justify-between items-center ${serviceType === "other" ? "bg-amber-100 text-amber-900 border-amber-400" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                    <span>خدمات أخرى (Others) ➕</span>
+                    <span className="text-[10px]">{serviceType === "other" ? "▼" : "▶"}</span>
+                  </button>
+
+                  {serviceType === "other" && (
+                    <div className="mt-2 animate-fade-in">
+                      <select value={otherService} onChange={(e) => setOtherService(e.target.value)} className="w-full bg-slate-50 border-2 border-amber-300 rounded-xl px-3 py-2 font-bold text-sm text-slate-800 outline-none">
+                        <option value="add_1l">إضافة 1 كيلو زيت</option>
+                        <option value="add_2l">إضافة 2 كيلو زيت</option>
+                        <option value="add_3l">إضافة 3 كيلو زيت</option>
+                        <option value="filter_only">تغيير فلتر فقط</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Idkhal l-KM w l-7ofoz */}
+                <div className="pt-1">
+                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">3. حدّث العداد:</span>
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" 
+                      placeholder="العداد الجديد..." 
+                      value={newKm}
+                      onChange={(e) => setNewKm(e.target.value)}
+                      className="flex-1 bg-white border-2 border-amber-200 rounded-xl px-3 py-2 font-black text-center text-lg outline-none focus:border-[#F5B301] shadow-inner"
+                      dir="ltr"
+                    />
+                    <button 
+                      onClick={updateOil}
+                      disabled={loading}
+                      className="bg-[#F5B301] text-slate-900 px-5 py-2 rounded-xl font-black text-lg shadow-md hover:bg-amber-400 transition"
+                    >
+                      حفظ ✓
+                    </button>
+                  </div>
+                </div>
+
+              </div>
             </div>
           )}
         </div>
