@@ -1,4 +1,5 @@
 import { cacheLife } from "next/cache";
+import { supabaseHeaders } from "./supabase";
 
 export type FuelKey = "p95" | "p98" | "diesel" | "gas";
 
@@ -70,7 +71,7 @@ export async function getPriceHistory(limit = 400): Promise<PriceRow[]> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/fuel_prices?select=table_date,p95,p98,diesel,gas,source&order=table_date.desc&limit=${limit}`,
-      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+      { headers: supabaseHeaders(SUPABASE_ANON) },
     );
     if (!res.ok) return [];
     return (await res.json()) as PriceRow[];
