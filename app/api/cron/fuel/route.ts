@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabaseHeaders } from "@/lib/supabase";
 import { beirutDate, scrapeIptPrices, IPT_SOURCE_URL, FUEL_KEYS } from "@/lib/fuel";
 
 // Called by Vercel Cron (see vercel.json). Stores a new row when the price table changes.
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
   if (!url || !serviceKey) {
     return NextResponse.json({ error: "database not configured" }, { status: 500 });
   }
-  const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
+  const headers = { ...supabaseHeaders(serviceKey), "Content-Type": "application/json" };
 
   const prices = await scrapeIptPrices();
   if (FUEL_KEYS.some((k) => prices[k] == null)) {
