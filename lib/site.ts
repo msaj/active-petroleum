@@ -14,6 +14,9 @@ export const ADDRESS_AR = "المنية، شمال لبنان";
 // Replace with the exact Google Maps link of the station when available.
 export const MAPS_URL = "https://www.google.com/maps/search/?api=1&query=A.Petroleum+IPT+Minieh+Lebanon";
 
+// EV charger booking hours offered in the form (24h clock). Change them here once the owner confirms.
+export const EV_BOOKING = { firstHour: 8, lastHour: 20 };
+
 export const SOCIAL = {
   facebook: "https://www.facebook.com/profile.php?id=100063526782499",
   instagram: "https://www.instagram.com/a.petroleum_/",
