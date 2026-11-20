@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SITE_URL } from "@/lib/site";
 
@@ -28,8 +29,9 @@ export const metadata: Metadata = {
     url: "/",
     title: "A.Petroleum | محطة IPT المنية",
     description: "أسعار المحروقات اليوم، توصيل مازوت وغاز، زيوت ELF وغسيل VIP بالمنية.",
-    images: [{ url: "/station-day.jpg", width: 1200, height: 630, alt: "محطة A.Petroleum بالمنية" }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "محطة A.Petroleum بالمنية" }],
   },
+  twitter: { card: "summary_large_image", images: ["/og.jpg"] },
   robots: { index: true, follow: true },
 };
 
@@ -40,7 +42,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ar" dir="rtl" className={`${cairo.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#F8FAFC] text-[#0F172A]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#F8FAFC] text-[#0F172A]">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
