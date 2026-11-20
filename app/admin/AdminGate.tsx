@@ -8,7 +8,7 @@ const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 let client: SupabaseClient | null = null;
 /** Created on first use in the browser, so the page can be prerendered without keys. */
-function getSupabase() {
+export function getSupabase() {
   if (!client) {
     client = createClient(SB_URL, KEY, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" },
@@ -52,7 +52,7 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
     setError("");
     const { error } = await getSupabase().auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin${window.location.search}` },
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin${window.location.pathname === "/admin" ? window.location.search : ""}` },
     });
     if (error) {
       setState("error");

@@ -1,314 +1,406 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
-import AdminGate, { useStaffToken } from "./AdminGate";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import AdminGate, { getSupabase } from "./AdminGate";
+import { OIL_PRODUCTS, OIL_SERVICES, OTHER_OIL, WASH_TYPES, addMonths, plateKey } from "@/lib/oil";
 
-function AdminPanel() {
-  const [plate, setPlate] = useState("");
-  const [customer, setCustomer] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
-  const [newKm, setNewKm] = useState("");
-  
-  // State l-Ghasil (Wash Type)
-  const [washType, setWashType] = useState("normal");
+type Customer = {
+  id: string;
+  plate_number: string;
+  name: string | null;
+  car: string | null;
+  whatsapp: string | null;
+  wash_count: number | null;
+  current_km: number | null;
+  oil_type: string | null;
+  last_visit: string | null;
+  last_oil_at: string | null;
+  next_oil_km: number | null;
+  next_oil_date: string | null;
+};
 
-  // State l-Zayt (Oil Details)
-  const [oilBrand, setOilBrand] = useState("ELF");
-  const [oilGrade, setOilGrade] = useState("10W-40");
-  const [serviceType, setServiceType] = useState("oil_only");
-  const [otherService, setOtherService] = useState("add_1l");
+type Visit = {
+  id: number;
+  visited_at: string;
+  service: "oil" | "wash";
+  wash_type: string | null;
+  oil_product: string | null;
+  oil_service: string | null;
+  oil_added_kg: number | null;
+  km: number | null;
+  next_oil_km: number | null;
+  next_oil_date: string | null;
+  notes: string | null;
+  staff_email: string | null;
+};
 
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  // Signed-in staff token: the customers table is only readable and writable by staff (RLS).
-  const token = useStaffToken();
+const CUSTOMER_COLS = "id,plate_number,name,car,whatsapp,wash_count,current_km,oil_type,last_visit,last_oil_at,next_oil_km,next_oil_date";
 
+const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-GB") : "غير محدد");
+const fmtKm = (n: number | null) => (n == null ? "غير محدد" : `${n.toLocaleString("en-US")} كم`);
+const label = (list: readonly { id: string; label: string }[], id: string | null) => list.find((x) => x.id === id)?.label ?? id ?? "";
+
+function Msg({ m }: { m: { text: string; ok: boolean } | null }) {
+  if (!m) return null;
+  return (
+    <div className={`p-3 rounded-xl text-sm font-bold text-center ${m.ok ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-800 border border-red-300"}`}>
+      {m.text}
+    </div>
+  );
+}
+
+function RegisterForm({ plate, onCreated }: { plate: string; onCreated: (c: Customer) => void }) {
+  const [f, setF] = useState({ plate_number: plate.toUpperCase(), name: "", car: "", whatsapp: "", current_km: "" });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const save = async () => {
+    if (!f.plate_number.trim()) return setMsg({ text: "اكتب رقم اللوحة.", ok: false });
+    setBusy(true);
+    const { data, error } = await getSupabase()
+      .from("customers")
+      .insert({
+        plate_number: f.plate_number.trim().toUpperCase(),
+        name: f.name.trim() || null,
+        car: f.car.trim() || null,
+        whatsapp: f.whatsapp.replace(/\D/g, "") || null,
+        current_km: f.current_km ? parseInt(f.current_km, 10) : 0,
+        oil_type: null,
+      })
+      .select(CUSTOMER_COLS)
+      .single();
+    setBusy(false);
+    if (error) return setMsg({ text: error.code === "23505" ? "هيدي اللوحة مسجّلة من قبل." : "ما زبط التسجيل، جرّب مرة تانية.", ok: false });
+    onCreated(data as Customer);
+  };
+
+  const input = "w-full bg-white border-2 border-slate-200 rounded-xl px-3 py-2.5 font-bold outline-none focus:border-[#0B4F9F]";
+  return (
+    <div className="bg-white border-2 border-[#0B4F9F] rounded-2xl p-5 space-y-3">
+      <h3 className="font-black text-[#0B4F9F] text-lg">تسجيل سيارة جديدة</h3>
+      <input className={input} dir="ltr" placeholder="رقم اللوحة" value={f.plate_number} onChange={(e) => setF({ ...f, plate_number: e.target.value })} />
+      <input className={input} placeholder="نوع السيارة وسنتها (مثلاً Kia Picanto 2016)" value={f.car} onChange={(e) => setF({ ...f, car: e.target.value })} />
+      <input className={input} placeholder="اسم صاحب السيارة" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      <input className={input} dir="ltr" inputMode="tel" placeholder="واتساب (مثلاً 03123456)" value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} />
+      <input className={input} dir="ltr" inputMode="numeric" placeholder="العداد الحالي (كم)" value={f.current_km} onChange={(e) => setF({ ...f, current_km: e.target.value.replace(/\D/g, "") })} />
+      <Msg m={msg} />
+      <button onClick={save} disabled={busy} className="w-full bg-[#0B4F9F] text-white py-3 rounded-xl font-black text-lg disabled:opacity-60">
+        {busy ? "..." : "تسجيل السيارة"}
+      </button>
+    </div>
+  );
+}
+
+function OilForm({ c, onSaved }: { c: Customer; onSaved: () => void }) {
+  const [product, setProduct] = useState(OIL_PRODUCTS[0].id);
+  const [other, setOther] = useState("");
+  const [service, setService] = useState<string>("oil_filter");
+  const [kg, setKg] = useState("1");
+  const [km, setKm] = useState("");
+  const [nextKm, setNextKm] = useState("");
+  const [nextDate, setNextDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const isChange = service === "oil_filter" || service === "oil_only";
+  const interval = useMemo(() => OIL_PRODUCTS.find((p) => p.id === product) ?? OTHER_OIL, [product]);
+
+  // Suggest the next change from the counter and the product interval; staff can edit it.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const plateParam = params.get("plate");
-    if (plateParam) {
-      setPlate(plateParam);
-      fetchCustomer(plateParam);
-    }
-  }, []);
+    const k = parseInt(km, 10);
+    setNextKm(Number.isFinite(k) ? String(k + interval.km) : "");
+    setNextDate(addMonths(new Date(), interval.months));
+  }, [km, interval]);
 
-  const fetchCustomer = async (searchPlate: string) => {
-    if (!searchPlate) return;
-    setLoading(true);
-    setMessage({ text: "", type: "" });
-    setCustomer(null);
-
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/customers?plate_number=eq.${encodeURIComponent(searchPlate)}&select=*`, {
-        headers: {
-          'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      
-      if (data && data.length > 0) {
-        setCustomer(data[0]);
-        // Eza fi zayt msajjal abel, mn7otto bl state la nbayan-ho
-        if (data[0].oil_type) {
-            const parts = data[0].oil_type.split(" ");
-            if(parts.length >= 2) {
-                setOilBrand(parts[0]);
-                setOilGrade(parts[1]);
-            }
-        }
-      } else {
-        setMessage({ text: "السيارة غير مسجلة بالنظام. يرجى تسجيلها أولاً.", type: "error" });
-      }
-    } catch (err) {
-      setMessage({ text: "خطأ بالاتصال بقاعدة البيانات.", type: "error" });
-    }
-    setLoading(false);
+  const save = async () => {
+    const k = km ? parseInt(km, 10) : null;
+    if (isChange && k == null) return setMsg({ text: "اكتب العداد.", ok: false });
+    if (k != null && c.current_km && k < c.current_km && !confirm(`العداد (${k}) أقل من آخر عداد مسجّل (${c.current_km}). متأكد؟`)) return;
+    const oil = product === "other" ? other.trim() || "غير محدد" : product;
+    setBusy(true);
+    const { error } = await getSupabase().rpc("record_visit", {
+      p_customer_id: c.id,
+      p_service: "oil",
+      p_oil_product: service === "filter_only" ? null : oil,
+      p_oil_service: service,
+      p_oil_added_kg: service === "top_up" ? parseFloat(kg) || null : null,
+      p_km: k,
+      p_next_oil_km: isChange && nextKm ? parseInt(nextKm, 10) : null,
+      p_next_oil_date: isChange && nextDate ? nextDate : null,
+      p_notes: notes,
+    });
+    setBusy(false);
+    if (error) return setMsg({ text: "ما زبط الحفظ، جرّب مرة تانية.", ok: false });
+    setMsg({ text: `تسجّل: ${label(OIL_SERVICES, service)}.`, ok: true });
+    setKm("");
+    setNotes("");
+    onSaved();
   };
 
-  // Tasjil l-Ghasil (Bedoun 3added)
-  const submitWash = async () => {
-    if (!customer) return;
-    setLoading(true);
-    
-    let washName = 
-      washType === "normal" ? "غسيل عادي" : 
-      washType === "rafe3" ? "غسيل ورافع (من تحت)" : 
-      washType === "moteur" ? "غسيل مع موتور" : "غسيل VIP شامل";
+  const chip = (on: boolean) => `py-2 px-1 rounded-xl font-black text-xs border-2 transition ${on ? "bg-[#F5B301] text-slate-900 border-[#F5B301]" : "bg-white text-slate-600 border-slate-200"}`;
+  const input = "w-full bg-white border-2 border-amber-200 rounded-xl px-3 py-2 font-black outline-none focus:border-[#F5B301]";
 
-    try {
-      const upd = await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation',
-          'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ last_visit: new Date().toISOString() })
-      });
-      if (!upd.ok || (await upd.json()).length === 0) throw new Error("not updated");
-      
-      setMessage({ text: `تم تسجيل (${washName}) بنجاح!`, type: "success" });
-    } catch (err) {
-      setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
-    }
-    setLoading(false);
-  };
+  return (
+    <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5 space-y-4">
+      <h3 className="font-black text-amber-800">زيت</h3>
+      <div className="grid grid-cols-2 gap-2">
+        {OIL_SERVICES.map((s) => (
+          <button key={s.id} onClick={() => setService(s.id)} className={chip(service === s.id)}>{s.label}</button>
+        ))}
+      </div>
 
-  // Tasjil l-Zayt w l-KM
-  const updateOil = async () => {
-    if (!customer || !newKm) {
-        setMessage({ text: "الرجاء إدخال العداد الجديد (KM) أولاً.", type: "error" });
-        return;
-    }
-    setLoading(true);
-    
-    const fullOilString = `${oilBrand} ${oilGrade}`;
+      {service !== "filter_only" && (
+        <div className="space-y-2">
+          <span className="text-xs font-black text-slate-500">الزيت</span>
+          <select value={product} onChange={(e) => setProduct(e.target.value)} className={input} dir="ltr">
+            {OIL_PRODUCTS.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+            <option value="other">غيرو…</option>
+          </select>
+          {product === "other" && <input className={input} dir="ltr" placeholder="الماركة والدرجة" value={other} onChange={(e) => setOther(e.target.value)} />}
+        </div>
+      )}
 
-    try {
-      const upd = await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation',
-          'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-            current_km: parseInt(newKm), 
-            oil_type: fullOilString,
-            last_visit: new Date().toISOString() 
-        })
-      });
-      if (!upd.ok || (await upd.json()).length === 0) throw new Error("not updated");
-      
-      setCustomer({ ...customer, current_km: parseInt(newKm), oil_type: fullOilString });
-      
-      let serviceName = serviceType === "oil_only" ? "غيار زيت" : serviceType === "oil_filter" ? "زيت مع فلتر" : "خدمات أخرى";
+      {service === "top_up" && (
+        <div className="space-y-2">
+          <span className="text-xs font-black text-slate-500">كمية الزيادة (كيلو)</span>
+          <input className={input} dir="ltr" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />
+        </div>
+      )}
 
-      setMessage({ text: `تم تسجيل (${serviceName}) وتحديث العداد بنجاح!`, type: "success" });
-      setNewKm("");
-    } catch (err) {
-      setMessage({ text: "فشل التحديث، حاول مجدداً.", type: "error" });
-    }
-    setLoading(false);
+      <div className="space-y-2">
+        <span className="text-xs font-black text-slate-500">العداد هلّق (آخر مسجّل: {fmtKm(c.current_km)})</span>
+        <input className={input} dir="ltr" inputMode="numeric" placeholder="مثلاً 145200" value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ""))} />
+      </div>
+
+      {isChange && (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1">
+            <span className="text-xs font-black text-slate-500">الغيار الجاي (كم)</span>
+            <input className={input} dir="ltr" inputMode="numeric" value={nextKm} onChange={(e) => setNextKm(e.target.value.replace(/\D/g, ""))} />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-black text-slate-500">أو بتاريخ</span>
+            <input className={input} type="date" dir="ltr" value={nextDate} onChange={(e) => setNextDate(e.target.value)} />
+          </label>
+        </div>
+      )}
+
+      <input className={input} placeholder="ملاحظة (اختياري)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <Msg m={msg} />
+      <button onClick={save} disabled={busy} className="w-full bg-[#F5B301] text-slate-900 py-3 rounded-xl font-black text-lg disabled:opacity-60">
+        {busy ? "..." : "حفظ الزيت ✓"}
+      </button>
+    </div>
+  );
+}
+
+function WashForm({ c, onSaved }: { c: Customer; onSaved: () => void }) {
+  const [type, setType] = useState<string>("normal");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const save = async () => {
+    setBusy(true);
+    const { error } = await getSupabase().rpc("record_visit", { p_customer_id: c.id, p_service: "wash", p_wash_type: type });
+    setBusy(false);
+    if (error) return setMsg({ text: "ما زبط الحفظ، جرّب مرة تانية.", ok: false });
+    setMsg({ text: `تسجّل: ${label(WASH_TYPES, type)}.`, ok: true });
+    onSaved();
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-5 space-y-4">
+      <h3 className="font-black text-[#0B4F9F]">غسيل <span className="text-xs text-slate-500">(عدد الغسلات: {c.wash_count ?? 0})</span></h3>
+      <div className="grid grid-cols-2 gap-2">
+        {WASH_TYPES.map((w) => (
+          <button
+            key={w.id}
+            onClick={() => setType(w.id)}
+            className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${type === w.id ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}
+          >
+            {w.label}
+          </button>
+        ))}
+      </div>
+      <Msg m={msg} />
+      <button onClick={save} disabled={busy} className="w-full bg-[#0B4F9F] text-white py-3 rounded-xl font-black text-lg disabled:opacity-60">
+        {busy ? "..." : "حفظ الغسيل ✓"}
+      </button>
+    </div>
+  );
+}
+
+function History({ visits }: { visits: Visit[] }) {
+  if (!visits.length) return <p className="text-sm text-slate-500 text-center">ما في زيارات مسجّلة بعد.</p>;
+  return (
+    <ul className="space-y-2">
+      {visits.map((v) => (
+        <li key={v.id} className="bg-white border border-slate-200 rounded-xl p-3 text-sm">
+          <div className="flex justify-between font-black">
+            <span>{v.service === "wash" ? label(WASH_TYPES, v.wash_type) : label(OIL_SERVICES, v.oil_service)}</span>
+            <span className="text-slate-500" dir="ltr">{fmtDate(v.visited_at)}</span>
+          </div>
+          <div className="text-slate-600 mt-1 space-x-reverse space-x-2">
+            {v.oil_product && <span dir="ltr">{v.oil_product}</span>}
+            {v.oil_added_kg != null && <span>• {v.oil_added_kg} كيلو</span>}
+            {v.km != null && <span>• {fmtKm(v.km)}</span>}
+            {v.next_oil_km != null && <span>• الجاي {fmtKm(v.next_oil_km)}</span>}
+          </div>
+          {v.notes && <div className="text-slate-500 mt-1">{v.notes}</div>}
+          {v.staff_email && <div className="text-[11px] text-slate-400 mt-1" dir="ltr">{v.staff_email}</div>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CarCard({ c }: { c: Customer }) {
+  const due =
+    (c.next_oil_km != null && c.current_km != null && c.current_km >= c.next_oil_km) ||
+    (c.next_oil_date != null && new Date(c.next_oil_date) <= new Date());
+  const row = "flex justify-between items-center text-sm font-bold border-b border-slate-700 pb-2";
+  return (
+    <div className="bg-slate-900 text-white rounded-2xl p-5 space-y-2">
+      <div className="text-2xl font-black tracking-widest border-b border-slate-700 pb-3" dir="ltr" style={{ fontFamily: "monospace" }}>
+        {c.plate_number}
+      </div>
+      {(c.car || c.name) && <div className="text-slate-300 text-sm">{[c.car, c.name].filter(Boolean).join(" • ")}</div>}
+      <div className={row}><span className="text-slate-400">آخر زيارة</span><span dir="ltr">{fmtDate(c.last_visit)}</span></div>
+      <div className={row}><span className="text-slate-400">العداد</span><span>{fmtKm(c.current_km)}</span></div>
+      <div className={row}><span className="text-slate-400">آخر زيت</span><span className="text-amber-400" dir="ltr">{c.oil_type || "غير محدد"}</span></div>
+      <div className="flex justify-between items-center text-sm font-bold">
+        <span className="text-slate-400">الغيار الجاي</span>
+        <span className={due ? "text-red-400" : "text-emerald-400"}>
+          {c.next_oil_km != null ? fmtKm(c.next_oil_km) : "غير محدد"}
+          {c.next_oil_date ? ` أو ${fmtDate(c.next_oil_date)}` : ""}
+          {due ? " • صار وقتو" : ""}
+        </span>
+      </div>
+      {c.whatsapp && (
+        <a
+          href={`https://wa.me/${c.whatsapp.startsWith("961") ? c.whatsapp : "961" + c.whatsapp.replace(/^0/, "")}`}
+          target="_blank"
+          rel="noopener"
+          className="block text-center bg-emerald-600 rounded-xl py-2 font-black mt-2"
+        >
+          واتساب الزبون
+        </a>
+      )}
+    </div>
+  );
+}
+
+function AdminPanel() {
+  const [plate, setPlate] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState<"oil" | "wash" | "history">("oil");
+
+  const load = useCallback(async (p: string) => {
+    const key = plateKey(p);
+    if (!key) return;
+    setLoading(true);
+    setError("");
+    setNotFound(false);
+    const sb = getSupabase();
+    const { data, error } = await sb.from("customers").select(CUSTOMER_COLS).eq("plate_key", key).maybeSingle();
+    if (error) {
+      setLoading(false);
+      setCustomer(null);
+      return setError("خطأ بالاتصال. تأكّد إنك مسجّل كموظف.");
+    }
+    setCustomer(data as Customer | null);
+    setNotFound(!data);
+    if (data) {
+      const { data: v } = await sb
+        .from("visits")
+        .select("id,visited_at,service,wash_type,oil_product,oil_service,oil_added_kg,km,next_oil_km,next_oil_date,notes,staff_email")
+        .eq("customer_id", (data as Customer).id)
+        .order("visited_at", { ascending: false })
+        .limit(20);
+      setVisits((v as Visit[]) ?? []);
+    }
+    setLoading(false);
+  }, []);
+
+  // A scanned QR sticker opens /admin?plate=...
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("plate");
+    if (p) {
+      setPlate(p);
+      load(p);
+    }
+  }, [load]);
+
+  const tabBtn = (t: typeof tab, text: string) => (
+    <button onClick={() => setTab(t)} className={`flex-1 py-2 rounded-xl font-black text-sm ${tab === t ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
+      {text}
+    </button>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-6" dir="rtl">
       <div className="max-w-md mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-slate-200">
-        
         <div className="bg-[#071120] p-6 text-center border-b-4 border-[#F5B301]">
           <h1 className="text-2xl font-black text-white">لوحة الموظفين</h1>
-          <p className="text-amber-400 text-xs mt-1 font-bold">A.Petroleum VIP System</p>
+          <p className="text-amber-400 text-xs mt-1 font-bold">زيت وغسيل • A.Petroleum</p>
         </div>
 
-        <div className="p-6">
-          {/* Ba7ess 3an sayara */}
-          <div className="flex gap-2 mb-6">
-            <input 
-              type="text" 
-              placeholder="رقم اللوحة (مثال: M 458921)" 
+        <div className="p-5 space-y-5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              load(plate);
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              placeholder="رقم اللوحة"
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
-              className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-black text-center text-slate-900 outline-none focus:border-[#0B4F9F] transition uppercase"
+              className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-black text-center outline-none focus:border-[#0B4F9F] uppercase"
               dir="ltr"
             />
-            <button 
-              onClick={() => fetchCustomer(plate)}
-              disabled={loading}
-              className="bg-[#0B4F9F] text-white px-5 rounded-xl font-bold shadow-md"
-            >
+            <button type="submit" disabled={loading} className="bg-[#0B4F9F] text-white px-5 rounded-xl font-bold">
               {loading ? "..." : "بحث"}
             </button>
-          </div>
+          </form>
 
-          {message.text && (
-            <div className={`p-3 rounded-xl text-sm font-bold text-center mb-6 ${message.type === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-red-100 text-red-800 border border-red-300'}`}>
-              {message.text}
-            </div>
+          {error && <Msg m={{ text: error, ok: false }} />}
+
+          {notFound && !customer && (
+            <>
+              <p className="text-center text-sm font-bold text-slate-600">ما لقينا هيدي اللوحة. سجّلها:</p>
+              <RegisterForm
+                plate={plate}
+                onCreated={(c) => {
+                  setCustomer(c);
+                  setNotFound(false);
+                  setVisits([]);
+                }}
+              />
+            </>
           )}
 
           {customer && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Bataka M3loumat l-Siyara */}
-              <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-inner">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-amber-400 text-[10px] font-black tracking-widest uppercase mb-1">VIP Customer</div>
-                    <div className="text-2xl font-black tracking-widest border-b border-slate-700 pb-3 mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }} dir="ltr">
-                      {customer.plate_number}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-sm font-bold border-b border-slate-700 pb-2 mb-2">
-                  <span className="text-slate-400">آخر زيارة:</span>
-                  <span>{new Date(customer.last_visit).toLocaleDateString('en-GB')}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm font-bold">
-                  <span className="text-slate-400">آخر زيت مستخدم:</span>
-                  <span className="text-amber-400" dir="ltr">{customer.oil_type || "غير محدد"}</span>
-                </div>
+            <>
+              <CarCard c={customer} />
+              <div className="flex gap-2">
+                {tabBtn("oil", "زيت")}
+                {tabBtn("wash", "غسيل")}
+                {tabBtn("history", `السجل (${visits.length})`)}
               </div>
-
-              {/* قسم الغسيل المطور */}
-              <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-5">
-                <h3 className="font-black text-[#0B4F9F] mb-3">خدمة الغسيل (Car Wash)</h3>
-                
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <button onClick={() => setWashType("normal")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "normal" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
-                    غسيل عادي 🚙
-                  </button>
-                  <button onClick={() => setWashType("rafe3")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "rafe3" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
-                    غسيل ورافع ⬆️
-                  </button>
-                  <button onClick={() => setWashType("moteur")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "moteur" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
-                    مع موتور ⚙️
-                  </button>
-                  <button onClick={() => setWashType("full_vip")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${washType === "full_vip" ? "bg-[#0B4F9F] text-white border-[#0B4F9F]" : "bg-white text-slate-600 border-slate-200"}`}>
-                    VIP شامل ✨
-                  </button>
-                </div>
-
-                <button 
-                  onClick={submitWash}
-                  disabled={loading}
-                  className="w-full bg-[#0B4F9F] hover:bg-[#083B78] text-white py-3 rounded-xl font-black text-lg shadow-md transition"
-                >
-                  تسجيل الغسيل ✓
-                </button>
-              </div>
-
-              {/* قسم الزيوت المطور */}
-              <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
-                <h3 className="font-black text-amber-800 mb-3">الزيوت والخدمات</h3>
-                
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-bold text-slate-600">آخر عداد:</span>
-                  <span className="font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-amber-200" dir="ltr">
-                    {customer.current_km.toLocaleString()} KM
-                  </span>
-                </div>
-
-                {/* Marka w Raqem l-Zayt */}
-                <div className="bg-white p-3 rounded-xl border border-amber-200 mb-4">
-                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">1. نوع الزيت:</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select value={oilBrand} onChange={(e) => setOilBrand(e.target.value)} className="bg-slate-50 border-2 border-amber-100 rounded-lg px-2 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-400" dir="ltr">
-                      <option value="ELF">ELF</option>
-                      <option value="TOTAL">TOTAL</option>
-                      <option value="QUANTUM">QUANTUM</option>
-                      <option value="IPT">IPT</option>
-                      <option value="CASTROL">CASTROL</option>
-                      <option value="LIQUI_MOLY">LIQUI MOLY</option>
-                    </select>
-                    
-                    <select value={oilGrade} onChange={(e) => setOilGrade(e.target.value)} className="bg-slate-50 border-2 border-amber-100 rounded-lg px-2 py-2 font-bold text-sm text-slate-800 outline-none focus:border-amber-400" dir="ltr">
-                      <option value="0W-20">0W-20</option>
-                      <option value="5W-30">5W-30</option>
-                      <option value="5W-40">5W-40</option>
-                      <option value="10W-40">10W-40</option>
-                      <option value="15W-40">15W-40</option>
-                      <option value="20W-50">20W-50</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Naw3 L-Khedme */}
-                <div className="bg-white p-3 rounded-xl border border-amber-200 mb-4">
-                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">2. الخدمة المقدمة:</span>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <button onClick={() => setServiceType("oil_only")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${serviceType === "oil_only" ? "bg-[#F5B301] text-slate-900 border-[#F5B301] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                      غيار زيت 🛢️
-                    </button>
-                    <button onClick={() => setServiceType("oil_filter")} className={`py-2 px-1 rounded-xl font-black text-xs border-2 transition ${serviceType === "oil_filter" ? "bg-[#F5B301] text-slate-900 border-[#F5B301] shadow-md" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                      زيت + فلتر ⚙️
-                    </button>
-                  </div>
-                  
-                  <button onClick={() => setServiceType("other")} className={`w-full py-2 px-3 rounded-xl font-black text-xs border-2 transition flex justify-between items-center ${serviceType === "other" ? "bg-amber-100 text-amber-900 border-amber-400" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                    <span>خدمات أخرى (Others) ➕</span>
-                    <span className="text-[10px]">{serviceType === "other" ? "▼" : "▶"}</span>
-                  </button>
-
-                  {serviceType === "other" && (
-                    <div className="mt-2 animate-fade-in">
-                      <select value={otherService} onChange={(e) => setOtherService(e.target.value)} className="w-full bg-slate-50 border-2 border-amber-300 rounded-xl px-3 py-2 font-bold text-sm text-slate-800 outline-none">
-                        <option value="add_1l">إضافة 1 كيلو زيت</option>
-                        <option value="add_2l">إضافة 2 كيلو زيت</option>
-                        <option value="add_3l">إضافة 3 كيلو زيت</option>
-                        <option value="filter_only">تغيير فلتر فقط</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                {/* Idkhal l-KM w l-7ofoz */}
-                <div className="pt-1">
-                  <span className="text-[11px] font-black text-slate-400 block mb-2 uppercase tracking-wider">3. حدّث العداد:</span>
-                  <div className="flex gap-2">
-                    <input 
-                      type="number" 
-                      placeholder="العداد الجديد..." 
-                      value={newKm}
-                      onChange={(e) => setNewKm(e.target.value)}
-                      className="flex-1 bg-white border-2 border-amber-200 rounded-xl px-3 py-2 font-black text-center text-lg outline-none focus:border-[#F5B301] shadow-inner"
-                      dir="ltr"
-                    />
-                    <button 
-                      onClick={updateOil}
-                      disabled={loading}
-                      className="bg-[#F5B301] text-slate-900 px-5 py-2 rounded-xl font-black text-lg shadow-md hover:bg-amber-400 transition"
-                    >
-                      حفظ ✓
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
+              {tab === "oil" && <OilForm c={customer} onSaved={() => load(customer.plate_number)} />}
+              {tab === "wash" && <WashForm c={customer} onSaved={() => load(customer.plate_number)} />}
+              {tab === "history" && <History visits={visits} />}
+            </>
           )}
         </div>
       </div>
@@ -319,9 +411,9 @@ function AdminPanel() {
 export default function AdminPage() {
   return (
     <AdminGate>
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black">جاري التحميل...</div>}>
-      <AdminPanel />
-    </Suspense>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black">جاري التحميل...</div>}>
+        <AdminPanel />
+      </Suspense>
     </AdminGate>
   );
 }
