@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { TIPS, getService, getTip } from "@/lib/content";
 import { formatArabicDate } from "@/lib/fuel";
 import { SITE_URL, waLink } from "@/lib/site";
@@ -119,12 +118,10 @@ async function TipContent({ params }: { params: PageProps<"/tips/[slug]">["param
   );
 }
 
-export default function TipPage(props: PageProps<"/tips/[slug]">) {
+export default async function TipPage(props: PageProps<"/tips/[slug]">) {
   return (
     <article className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-8">
-      <Suspense fallback={<p className="text-slate-500">جاري التحميل...</p>}>
-        <TipContent params={props.params} />
-      </Suspense>
+      <TipContent params={props.params} />
     </article>
   );
 }
