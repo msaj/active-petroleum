@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import AdminGate, { useStaffToken } from "./AdminGate";
 
 function AdminPanel() {
   const [plate, setPlate] = useState("");
@@ -20,6 +21,8 @@ function AdminPanel() {
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Signed-in staff token: the customers table is only readable and writable by staff (RLS).
+  const token = useStaffToken();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,7 +43,7 @@ function AdminPanel() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/customers?plate_number=eq.${encodeURIComponent(searchPlate)}&select=*`, {
         headers: {
           'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await res.json();
@@ -75,15 +78,17 @@ function AdminPanel() {
       washType === "moteur" ? "غسيل مع موتور" : "غسيل VIP شامل";
 
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
+      const upd = await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
           'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ last_visit: new Date().toISOString() })
       });
+      if (!upd.ok || (await upd.json()).length === 0) throw new Error("not updated");
       
       setMessage({ text: `تم تسجيل (${washName}) بنجاح!`, type: "success" });
     } catch (err) {
@@ -103,12 +108,13 @@ function AdminPanel() {
     const fullOilString = `${oilBrand} ${oilGrade}`;
 
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
+      const upd = await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
           'apikey': SUPABASE_KEY || "",
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
             current_km: parseInt(newKm), 
@@ -116,6 +122,7 @@ function AdminPanel() {
             last_visit: new Date().toISOString() 
         })
       });
+      if (!upd.ok || (await upd.json()).length === 0) throw new Error("not updated");
       
       setCustomer({ ...customer, current_km: parseInt(newKm), oil_type: fullOilString });
       
@@ -311,8 +318,10 @@ function AdminPanel() {
 
 export default function AdminPage() {
   return (
+    <AdminGate>
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black">جاري التحميل...</div>}>
       <AdminPanel />
     </Suspense>
+    </AdminGate>
   );
 }
