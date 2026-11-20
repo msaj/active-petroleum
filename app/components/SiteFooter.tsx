@@ -16,6 +16,7 @@ export default function SiteFooter() {
           <Link href="/fuel-prices" className="block hover:text-white">أسعار المحروقات اليوم في لبنان</Link>
           <Link href="/#services" className="block hover:text-white">الخدمات</Link>
           <Link href="/#order" className="block hover:text-white">اطلب مازوت أو غاز</Link>
+          <Link href="/book-charging" className="block hover:text-white">احجز شاحن للسيارة الكهربائية</Link>
           <Link href="/tips" className="block hover:text-white">نصائح لسيارتك</Link>
         </div>
         <div className="space-y-2 text-sm">

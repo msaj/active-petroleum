@@ -9,6 +9,7 @@ const NAV = [
   { href: "/fuel-prices", label: "أسعار المحروقات" },
   { href: "/#services", label: "الخدمات" },
   { href: "/#order", label: "اطلب مازوت أو غاز" },
+  { href: "/book-charging", label: "احجز شاحن" },
   { href: "/#oils", label: "الزيوت" },
   { href: "/tips", label: "نصائح" },
   { href: "/#contact", label: "تواصل" },
@@ -38,7 +39,7 @@ export default function SiteHeader() {
             <Logo />
           </Link>
 
-          <nav aria-label="القائمة الرئيسية" className="hidden lg:flex items-center gap-6 text-[15px] font-bold text-slate-700">
+          <nav aria-label="القائمة الرئيسية" className="hidden lg:flex items-center gap-4 xl:gap-6 text-[15px] font-bold text-slate-700">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className="hover:text-[#0B4F9F]">
                 {n.label}

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import PriceBoard from "../components/PriceBoard";
 import Showcase from "../components/Showcase";
 import OrderForm from "../components/OrderForm";
+import EvBookingForm from "../components/EvBookingForm";
 import { ADDRESS_AR, MAPS_URL, PHONE_DISPLAY, PHONE_E164, waLink } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -106,6 +108,23 @@ export default function HomePage() {
             </ol>
           </div>
           <OrderForm />
+        </div>
+      </section>
+
+      <section id="ev" className="py-10 px-4 sm:px-6 max-w-7xl mx-auto scroll-mt-24">
+        <div className="bg-white border border-slate-200 rounded-[28px] p-6 sm:p-10 grid gap-8 lg:grid-cols-2 items-start">
+          <div className="space-y-4">
+            <span className="text-[#0B4F9F] font-extrabold text-sm">شواحن EVZONE</span>
+            <h2 className="text-2xl sm:text-4xl font-black leading-[1.4]">سيارتك كهربائية؟ احجز الشاحن قبل ما تجي</h2>
+            <p className="text-slate-600 leading-8">اختار اليوم والساعة ونوع الموصل، الطلب بيوصلنا عالواتساب ومنثبّتلك الموعد. هيك ما بتستنّى عالشاحن.</p>
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden">
+              <Image src="/evzone.jpg" alt="شاحن EVZONE للسيارات الكهربائية بمحطة A.Petroleum بالمنية" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+            </div>
+            <Link href="/services/ev-charging" className="inline-block font-extrabold text-[#0B4F9F] underline">كل شي عن الشحن ونصائح البطارية</Link>
+          </div>
+          <div className="bg-[#0B2545] rounded-2xl p-1.5">
+            <EvBookingForm />
+          </div>
         </div>
       </section>
 
