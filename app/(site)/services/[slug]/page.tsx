@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { SERVICES, getService, getTip } from "@/lib/content";
 import { PHONE_DISPLAY, PHONE_E164, SITE_URL, waLink } from "@/lib/site";
 import { Blocks, Breadcrumbs, FaqList, LdJson } from "../../../components/ContentBlocks";
@@ -107,12 +106,10 @@ async function ServiceContent({ params }: { params: PageProps<"/services/[slug]"
   );
 }
 
-export default function ServicePage(props: PageProps<"/services/[slug]">) {
+export default async function ServicePage(props: PageProps<"/services/[slug]">) {
   return (
     <article className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-8">
-      <Suspense fallback={<p className="text-slate-500">جاري التحميل...</p>}>
-        <ServiceContent params={props.params} />
-      </Suspense>
+      <ServiceContent params={props.params} />
     </article>
   );
 }
