@@ -1,5 +1,5 @@
 // Basic business facts used across the site. Change them here only.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://active-petroleum.vercel.app").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://apetroleumlb.com").replace(/\/$/, "");
 
 export const BRAND = "A.Petroleum";
 export const BRAND_AR = "محطة A.Petroleum";
