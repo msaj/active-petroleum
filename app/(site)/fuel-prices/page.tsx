@@ -84,7 +84,7 @@ export default async function FuelPricesPage() {
         </div>
         <div>
           <h3 className="font-extrabold text-lg">بتوصّلو مازوت للبيت؟</h3>
-          <p className="text-slate-600 leading-8 mt-1">إي، منوصّل مازوت التدفئة بالصهريج للبيوت والمؤسسات بالمنية والشمال. <Link href="/#order" className="font-extrabold text-[#0B4F9F] underline">اطلب من هون</Link>.</p>
+          <p className="text-slate-600 leading-8 mt-1">إي، منوصّل مازوت التدفئة بالصهريج للبيوت والمؤسسات. ابعتلنا العنوان ومنقلّك إذا منوصّل لعندك. <Link href="/services/heating-diesel" className="font-extrabold text-[#0B4F9F] underline">التفاصيل والطلب</Link>.</p>
         </div>
       </section>
     </div>
