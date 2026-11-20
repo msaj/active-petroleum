@@ -18,6 +18,14 @@ export async function generateMetadata({ params }: PageProps<"/fuel-prices/[date
     title,
     description: `سعر صفيحة البنزين 95 و98 والمازوت وقارورة الغاز حسب جدول ${formatArabicDate(date)}، مع التغيّر عن الجدول اللي قبله.`,
     alternates: { canonical: `/fuel-prices/${date}` },
+    openGraph: {
+      type: "article",
+      locale: "ar_LB",
+      siteName: "A.Petroleum",
+      url: `/fuel-prices/${date}`,
+      title,
+      images: [{ url: "/og.jpg", width: 1200, height: 630 }],
+    },
   };
 }
 
