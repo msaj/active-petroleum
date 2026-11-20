@@ -17,6 +17,7 @@ type Customer = {
   last_oil_at: string | null;
   next_oil_km: number | null;
   next_oil_date: string | null;
+  sticker_code: string | null;
 };
 
 type Visit = {
@@ -34,7 +35,9 @@ type Visit = {
   staff_email: string | null;
 };
 
-const CUSTOMER_COLS = "id,plate_number,name,car,whatsapp,wash_count,current_km,oil_type,last_visit,last_oil_at,next_oil_km,next_oil_date";
+const CUSTOMER_COLS = "id,plate_number,name,car,whatsapp,wash_count,current_km,oil_type,last_visit,last_oil_at,next_oil_km,next_oil_date,sticker_code";
+
+const stickerKey = (s: string) => s.toUpperCase().replace(/[^A-Z0-9-]/g, "");
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-GB") : "غير محدد");
 const fmtKm = (n: number | null) => (n == null ? "غير محدد" : `${n.toLocaleString("en-US")} كم`);
@@ -49,7 +52,7 @@ function Msg({ m }: { m: { text: string; ok: boolean } | null }) {
   );
 }
 
-function RegisterForm({ plate, onCreated }: { plate: string; onCreated: (c: Customer) => void }) {
+function RegisterForm({ plate, sticker, onCreated }: { plate: string; sticker: string | null; onCreated: (c: Customer) => void }) {
   const [f, setF] = useState({ plate_number: plate.toUpperCase(), name: "", car: "", whatsapp: "", current_km: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -66,11 +69,12 @@ function RegisterForm({ plate, onCreated }: { plate: string; onCreated: (c: Cust
         whatsapp: f.whatsapp.replace(/\D/g, "") || null,
         current_km: f.current_km ? parseInt(f.current_km, 10) : 0,
         oil_type: null,
+        sticker_code: sticker,
       })
       .select(CUSTOMER_COLS)
       .single();
     setBusy(false);
-    if (error) return setMsg({ text: error.code === "23505" ? "هيدي اللوحة مسجّلة من قبل." : "ما زبط التسجيل، جرّب مرة تانية.", ok: false });
+    if (error) return setMsg({ text: error.code === "23505" ? "هيدي اللوحة أو هيدا الملصق مسجّلين من قبل." : "ما زبط التسجيل، جرّب مرة تانية.", ok: false });
     onCreated(data as Customer);
   };
 
@@ -78,6 +82,7 @@ function RegisterForm({ plate, onCreated }: { plate: string; onCreated: (c: Cust
   return (
     <div className="bg-white border-2 border-[#0B4F9F] rounded-2xl p-5 space-y-3">
       <h3 className="font-black text-[#0B4F9F] text-lg">تسجيل سيارة جديدة</h3>
+      {sticker && <p className="text-sm font-bold text-slate-600">الملصق <span dir="ltr">{sticker}</span> رح ينربط بهالسيارة.</p>}
       <input className={input} dir="ltr" placeholder="رقم اللوحة" value={f.plate_number} onChange={(e) => setF({ ...f, plate_number: e.target.value })} />
       <input className={input} placeholder="نوع السيارة وسنتها (مثلاً Kia Picanto 2016)" value={f.car} onChange={(e) => setF({ ...f, car: e.target.value })} />
       <input className={input} placeholder="اسم صاحب السيارة" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
@@ -257,6 +262,50 @@ function History({ visits }: { visits: Visit[] }) {
   );
 }
 
+function StickerLink({ c, pending, onLinked }: { c: Customer; pending: string | null; onLinked: () => void }) {
+  const [code, setCode] = useState(pending ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const replacing = !!c.sticker_code;
+
+  const link = async () => {
+    const k = stickerKey(code);
+    if (!k) return setMsg({ text: "اكتب رقم الملصق (مثلاً AP-7K3Q9X).", ok: false });
+    if (replacing && !confirm(`هالسيارة إلها ملصق ${c.sticker_code}. بدّك تبدّلو بـ ${k}؟`)) return;
+    setBusy(true);
+    const sb = getSupabase();
+    const { data: st } = await sb.from("stickers").select("code").eq("code", k).maybeSingle();
+    if (!st) {
+      setBusy(false);
+      return setMsg({ text: "هيدا الرقم مش من ملصقاتنا. شيّك عليه.", ok: false });
+    }
+    const { error } = await sb.from("customers").update({ sticker_code: k }).eq("id", c.id);
+    setBusy(false);
+    if (error) return setMsg({ text: error.code === "23505" ? "هيدا الملصق مربوط بسيارة تانية." : "ما زبط الربط، جرّب مرة تانية.", ok: false });
+    setMsg({ text: `انربط الملصق ${k}.`, ok: true });
+    onLinked();
+  };
+
+  return (
+    <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-4 space-y-2">
+      <p className="text-sm font-black text-slate-700">{replacing ? "تبديل الملصق" : "ربط ملصق QR بهالسيارة"}</p>
+      <div className="flex gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="AP-XXXXXX"
+          dir="ltr"
+          className="flex-1 bg-white border-2 border-slate-200 rounded-xl px-3 py-2 font-black text-center uppercase outline-none focus:border-[#0B4F9F]"
+        />
+        <button onClick={link} disabled={busy} className="bg-slate-900 text-white px-4 rounded-xl font-black disabled:opacity-60">
+          {busy ? "..." : "ربط"}
+        </button>
+      </div>
+      <Msg m={msg} />
+    </div>
+  );
+}
+
 function CarCard({ c }: { c: Customer }) {
   const due =
     (c.next_oil_km != null && c.current_km != null && c.current_km >= c.next_oil_km) ||
@@ -268,6 +317,7 @@ function CarCard({ c }: { c: Customer }) {
         {c.plate_number}
       </div>
       {(c.car || c.name) && <div className="text-slate-300 text-sm">{[c.car, c.name].filter(Boolean).join(" • ")}</div>}
+      <div className="flex justify-between items-center text-sm font-bold border-b border-slate-700 pb-2"><span className="text-slate-400">الملصق</span><span dir="ltr" className={c.sticker_code ? "" : "text-slate-500"}>{c.sticker_code ?? "ما في"}</span></div>
       <div className={row}><span className="text-slate-400">آخر زيارة</span><span dir="ltr">{fmtDate(c.last_visit)}</span></div>
       <div className={row}><span className="text-slate-400">العداد</span><span>{fmtKm(c.current_km)}</span></div>
       <div className={row}><span className="text-slate-400">آخر زيت</span><span className="text-amber-400" dir="ltr">{c.oil_type || "غير محدد"}</span></div>
@@ -301,19 +351,34 @@ function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"oil" | "wash" | "history">("oil");
+  // Sticker scanned but not yet linked to a car.
+  const [pendingSticker, setPendingSticker] = useState<string | null>(null);
+  const [showLink, setShowLink] = useState(false);
 
-  const load = useCallback(async (p: string) => {
-    const key = plateKey(p);
+  const load = useCallback(async (p: string, by: "plate" | "sticker" = "plate") => {
+    const key = by === "plate" ? plateKey(p) : stickerKey(p);
     if (!key) return;
     setLoading(true);
     setError("");
     setNotFound(false);
     const sb = getSupabase();
-    const { data, error } = await sb.from("customers").select(CUSTOMER_COLS).eq("plate_key", key).maybeSingle();
+    const { data, error } = await sb
+      .from("customers")
+      .select(CUSTOMER_COLS)
+      .eq(by === "plate" ? "plate_key" : "sticker_code", key)
+      .maybeSingle();
     if (error) {
       setLoading(false);
       setCustomer(null);
       return setError("خطأ بالاتصال. تأكّد إنك مسجّل كموظف.");
+    }
+    if (!data && by === "sticker") {
+      const { data: st } = await sb.from("stickers").select("code").eq("code", key).maybeSingle();
+      setLoading(false);
+      setCustomer(null);
+      if (!st) return setError(`الملصق ${key} مش معروف.`);
+      setPendingSticker(key);
+      return;
     }
     setCustomer(data as Customer | null);
     setNotFound(!data);
@@ -329,10 +394,13 @@ function AdminPanel() {
     setLoading(false);
   }, []);
 
-  // A scanned QR sticker opens /admin?plate=...
+  // A scanned sticker opens /admin?sticker=AP-XXXXXX (older stickers: /admin?plate=...).
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("plate");
-    if (p) {
+    const q = new URLSearchParams(window.location.search);
+    const st = q.get("sticker");
+    const p = q.get("plate");
+    if (st) load(st, "sticker");
+    else if (p) {
       setPlate(p);
       load(p);
     }
@@ -356,13 +424,16 @@ function AdminPanel() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              load(plate);
+              // The code printed under the QR (AP-XXXXXX) can be typed here too.
+              const m = plate.trim().toUpperCase().match(/^AP[-\s]?([A-Z0-9]{6})$/);
+              if (m) load(`AP-${m[1]}`, "sticker");
+              else load(plate);
             }}
             className="flex gap-2"
           >
             <input
               type="text"
-              placeholder="رقم اللوحة"
+              placeholder="رقم اللوحة أو كود الملصق"
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
               className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-black text-center outline-none focus:border-[#0B4F9F] uppercase"
@@ -375,12 +446,20 @@ function AdminPanel() {
 
           {error && <Msg m={{ text: error, ok: false }} />}
 
+          {pendingSticker && !customer && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-sm font-bold text-amber-900">
+              ملصق جديد <span dir="ltr">{pendingSticker}</span>. دوّر على اللوحة فوق: إذا السيارة مسجّلة منربطو فيها، وإذا لأ منسجّلها مع الملصق.
+            </div>
+          )}
+
           {notFound && !customer && (
             <>
               <p className="text-center text-sm font-bold text-slate-600">ما لقينا هيدي اللوحة. سجّلها:</p>
               <RegisterForm
                 plate={plate}
+                sticker={pendingSticker}
                 onCreated={(c) => {
+                  setPendingSticker(null);
                   setCustomer(c);
                   setNotFound(false);
                   setVisits([]);
@@ -392,6 +471,13 @@ function AdminPanel() {
           {customer && (
             <>
               <CarCard c={customer} />
+              {pendingSticker && customer.sticker_code !== pendingSticker ? (
+                <StickerLink c={customer} pending={pendingSticker} onLinked={() => { setPendingSticker(null); load(customer.plate_number); }} />
+              ) : !customer.sticker_code || showLink ? (
+                <StickerLink c={customer} pending={null} onLinked={() => { setShowLink(false); load(customer.plate_number); }} />
+              ) : (
+                <button onClick={() => setShowLink(true)} className="text-xs font-bold text-slate-500 underline">تبديل الملصق</button>
+              )}
               <div className="flex gap-2">
                 {tabBtn("oil", "زيت")}
                 {tabBtn("wash", "غسيل")}
