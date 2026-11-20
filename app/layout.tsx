@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description:
     "محطة A.Petroleum بالمنية، شمال لبنان: أسعار المحروقات اليوم، توصيل مازوت التدفئة والغاز، تغيير زيت ELF، غسيل VIP، شحن السيارات الكهربائية ونيتروجين للدواليب.",
   applicationName: "A.Petroleum",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "A.Petroleum", statusBarStyle: "default" },
   keywords: ["A.Petroleum", "محطة بنزين المنية", "IPT المنية", "أسعار المحروقات اليوم لبنان", "مازوت تدفئة", "تغيير زيت", "غسيل سيارات المنية"],
   alternates: { canonical: "/" },
   openGraph: {

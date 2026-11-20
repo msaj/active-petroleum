@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import AdminGate, { getSupabase } from "./AdminGate";
+import InstallApp from "@/app/components/InstallApp";
 import { OIL_PRODUCTS, OIL_SERVICES, OTHER_OIL, WASH_TYPES, addMonths, plateKey } from "@/lib/oil";
 
 type Customer = {
@@ -418,6 +419,7 @@ function AdminPanel() {
         <div className="bg-[#071120] p-6 text-center border-b-4 border-[#F5B301]">
           <h1 className="text-2xl font-black text-white">لوحة الموظفين</h1>
           <p className="text-amber-400 text-xs mt-1 font-bold">زيت وغسيل • A.Petroleum</p>
+          <InstallApp className="mt-3" />
         </div>
 
         <div className="p-5 space-y-5">
