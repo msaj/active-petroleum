@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 
 const SERVICES = [
   { title: "وقود IPT", text: "بنزين 95 و98 ومازوت، مع خدمة سريعة عالمضخة.", href: "/fuel-prices", cta: "أسعار اليوم", icon: "M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3M7 7h5v4H7z" },
-  { title: "مازوت التدفئة والغاز", text: "توصيل مازوت بالصهريج وقناني غاز للبيوت والمؤسسات بالمنية والشمال.", href: "#order", cta: "اطلب هلّق", icon: "M2 9h13v8H2zM15 12h4l3 3v2h-7M5 9V6h7v3", highlight: true },
-  { title: "تغيير زيت وفلاتر", text: "زيوت ELF وتبديل الفلاتر بالدرجة اللي بيطلبها موتورك.", href: "#oils", cta: "الزيوت", icon: "M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z" },
-  { title: "غسيل VIP", text: "غسيل عادي، ورافع من تحت، مع موتور، وVIP شامل.", href: waLink("مرحبا A.Petroleum، بدي احجز غسيل للسيارة"), cta: "احجز غسيل", icon: "M3 15l2-5a3 3 0 0 1 2.8-2h8.4A3 3 0 0 1 19 10l2 5v3H3zM8 4v1M12 3v2M16 4v1" },
-  { title: "شحن السيارات الكهربائية", text: "شواحن EVZONE بالمحطة.", href: waLink("مرحبا A.Petroleum، بدي استفسر عن شحن السيارة الكهربائية"), cta: "استفسر", icon: "M4 3h10v18H4zM10 7l-2 4h3l-2 4M14 9h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8" },
-  { title: "نيتروجين للدواليب", text: "تعبئة الإطارات بالنيتروجين لضغط أثبت لفترة أطول.", href: waLink("مرحبا A.Petroleum، بدي استفسر عن تعبئة النيتروجين"), cta: "استفسر", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" },
+  { title: "مازوت التدفئة والغاز", text: "توصيل مازوت التدفئة بالصهريج وقناني غاز للبيوت والمؤسسات.", href: "/services/heating-diesel", cta: "التفاصيل والطلب", icon: "M2 9h13v8H2zM15 12h4l3 3v2h-7M5 9V6h7v3", highlight: true },
+  { title: "تغيير زيت وفلاتر", text: "زيوت ELF وتبديل الفلاتر بالدرجة اللي بيطلبها موتورك.", href: "/services/oil-change", cta: "تغيير الزيت", icon: "M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z" },
+  { title: "غسيل VIP", text: "غسيل عادي، ورافع من تحت، مع موتور، وVIP شامل.", href: "/services/car-wash", cta: "أنواع الغسيل", icon: "M3 15l2-5a3 3 0 0 1 2.8-2h8.4A3 3 0 0 1 19 10l2 5v3H3zM8 4v1M12 3v2M16 4v1" },
+  { title: "شحن السيارات الكهربائية", text: "شواحن EVZONE بالمحطة.", href: "/services/ev-charging", cta: "شحن EV", icon: "M4 3h10v18H4zM10 7l-2 4h3l-2 4M14 9h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8" },
+  { title: "نيتروجين للدواليب", text: "تعبئة الإطارات بالنيتروجين لضغط أثبت لفترة أطول.", href: "/tips/tyre-nitrogen", cta: "شو بيفيد النيتروجين؟", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" },
 ];
 
 const OILS = [
@@ -26,6 +26,7 @@ const OILS = [
 const TIPS = [
   {
     tag: "لمبات التابلو",
+    href: "/tips/oil-warning-light",
     q: "ضوّت لمبة الزيت وإنت ماشي؟",
     a: "وقّف بأمان وطفّي الموتور. اللمبة الحمرا يعني ضغط الزيت واطي، والموتور ما عم يوصلو زيت كافي. شيك مستوى الزيت، ولا تكمّل سواقة قبل ما تعرف السبب.",
   },
@@ -136,9 +137,13 @@ export default function HomePage() {
               <span className="text-[#F5B301] text-xs font-extrabold">{t.tag}</span>
               <h3 className="text-xl font-black leading-8">{t.q}</h3>
               <p className="text-slate-200 leading-8">{t.a}</p>
+              {"href" in t && t.href && (
+                <Link href={t.href} className="inline-block font-extrabold text-[#F5B301] hover:underline">اقرأ أكتر</Link>
+              )}
             </article>
           ))}
         </div>
+        <Link href="/tips" className="inline-block mt-6 font-extrabold text-[#0B4F9F] hover:underline">كل النصائح: الزيت، البنزين 95 أو 98، مازوت التدفئة والدواليب</Link>
       </section>
 
       <section id="contact" className="py-10 px-4 sm:px-6 max-w-7xl mx-auto scroll-mt-24">

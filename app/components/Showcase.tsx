@@ -7,7 +7,7 @@ const SLIDES = [
     tab: "المحطة",
     tag: "MINIEH STATION • المنية",
     title: "محطة IPT حديثة بالمنية",
-    desc: "مضخات Quantum وخدمة سريعة، وصهاريج لتوصيل المازوت للبيوت والمؤسسات بالمنية والشمال.",
+    desc: "مضخات Quantum وخدمة سريعة، وصهاريج لتوصيل المازوت للبيوت والمؤسسات.",
     img: "/station-day.jpg",
     alt: "محطة A.Petroleum بالمنية بالنهار",
     gradient: "from-blue-950 via-slate-900 to-amber-950",

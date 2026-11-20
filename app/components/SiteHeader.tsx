@@ -10,7 +10,7 @@ const NAV = [
   { href: "/#services", label: "الخدمات" },
   { href: "/#order", label: "اطلب مازوت أو غاز" },
   { href: "/#oils", label: "الزيوت" },
-  { href: "/#tips", label: "نصائح" },
+  { href: "/tips", label: "نصائح" },
   { href: "/#contact", label: "تواصل" },
 ];
 

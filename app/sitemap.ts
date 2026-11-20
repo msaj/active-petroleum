@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { getPriceHistory } from "@/lib/fuel";
+import { SERVICES, TIPS } from "@/lib/content";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const history = await getPriceHistory();
@@ -8,6 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/fuel-prices`, lastModified: latest, changeFrequency: "daily", priority: 0.9 },
+    ...SERVICES.map((s) => ({ url: `${SITE_URL}/services/${s.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
+    { url: `${SITE_URL}/tips`, changeFrequency: "weekly", priority: 0.7 },
+    ...TIPS.map((t) => ({ url: `${SITE_URL}/tips/${t.slug}`, lastModified: t.published, changeFrequency: "yearly" as const, priority: 0.7 })),
     ...history.map((r) => ({
       url: `${SITE_URL}/fuel-prices/${r.table_date}`,
       lastModified: r.table_date,
