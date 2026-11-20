@@ -30,7 +30,7 @@ export default function JsonLd() {
           addressRegion: "North Lebanon",
           addressCountry: "LB",
         },
-        areaServed: ["Minieh", "Danniyeh", "Tripoli", "North Lebanon"],
+        areaServed: ["Minieh", "North Lebanon"],
         amenityFeature: [
           { "@type": "LocationFeatureSpecification", name: "EV charging", value: true },
           { "@type": "LocationFeatureSpecification", name: "Nitrogen tyre inflation", value: true },
