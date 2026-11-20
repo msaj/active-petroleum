@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FUEL_KEYS, FUEL_LABELS, formatArabicDateTime, formatLbp, formatUsd, getCurrentPrices, IPT_SOURCE_URL } from "@/lib/fuel";
+import { FUEL_KEYS, FUEL_LABELS, formatArabicDate, formatArabicDateTime, formatLbp, formatUsd, getCurrentPrices, IPT_SOURCE_URL } from "@/lib/fuel";
 
 const ACCENT: Record<string, string> = {
   p95: "border-r-4 border-r-emerald-500",
@@ -9,7 +9,7 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function PriceBoard({ showLink = true }: { showLink?: boolean }) {
-  const { prices, checkedAt } = await getCurrentPrices();
+  const { prices, tableDate, checkedAt } = await getCurrentPrices();
 
   return (
     <div className="w-full bg-[#090F1A] text-white rounded-[28px] p-5 sm:p-6 shadow-xl border-4 border-slate-200">
@@ -36,6 +36,7 @@ export default async function PriceBoard({ showLink = true }: { showLink?: boole
       </ul>
 
       <p className="mt-3 text-[11px] leading-5 text-slate-400">
+        {tableDate && <>جدول {formatArabicDate(tableDate)} • </>}
         آخر تحقق: {formatArabicDateTime(checkedAt)} • المصدر:{" "}
         <a href={IPT_SOURCE_URL} target="_blank" rel="noopener nofollow" className="underline hover:text-white">IPT Group</a>
         {" "}• الدولار تقريبي على 89,500 ل.ل.

@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { supabaseHeaders } from "@/lib/supabase";
-import { beirutDate, scrapeIptPrices, IPT_SOURCE_URL, FUEL_KEYS } from "@/lib/fuel";
+import { beirutDate, scrapeIptTable, IPT_SOURCE_URL, FUEL_KEYS, FUEL_TAG } from "@/lib/fuel";
+import { SITE_URL } from "@/lib/site";
 
-// Called by Vercel Cron (see vercel.json). Stores a new row when the price table changes.
+/** Marks cached prices stale and rebuilds the main price pages right away, so visitors and crawlers see the new table. */
+async function refreshPages(extra: string[] = []) {
+  revalidateTag(FUEL_TAG, { expire: 0 });
+  const paths = ["/fuel-prices", "/", "/sitemap.xml", ...extra];
+  await Promise.allSettled(paths.map((p) => fetch(`${SITE_URL}${p}`, { cache: "no-store" })));
+}
+
+// Called by Vercel Cron (see vercel.json). Stores a new row when the price table changes,
+// then refreshes the cached price pages.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -16,7 +26,7 @@ export async function GET(request: Request) {
   }
   const headers = { ...supabaseHeaders(serviceKey), "Content-Type": "application/json" };
 
-  const prices = await scrapeIptPrices();
+  const { prices, tableDate } = await scrapeIptTable();
   if (FUEL_KEYS.some((k) => prices[k] == null)) {
     return NextResponse.json({ error: "could not read all prices", prices }, { status: 502 });
   }
@@ -28,10 +38,13 @@ export async function GET(request: Request) {
   const last = lastRes.ok ? ((await lastRes.json()) as Record<string, number | string>[])[0] : undefined;
   const changed = !last || FUEL_KEYS.some((k) => Number(last[k]) !== prices[k]);
   if (!changed) {
+    await refreshPages();
     return NextResponse.json({ stored: false, reason: "no change", last_table: last?.table_date });
   }
 
-  const today = beirutDate();
+  // Use the date printed by IPT; fall back to today's Beirut date if it is missing or older than the last row.
+  let today = tableDate ?? beirutDate();
+  if (last && String(last.table_date) >= today) today = beirutDate();
   const ins = await fetch(`${url}/rest/v1/fuel_prices?on_conflict=table_date`, {
     method: "POST",
     headers: { ...headers, Prefer: "resolution=merge-duplicates,return=minimal" },
@@ -40,5 +53,6 @@ export async function GET(request: Request) {
   if (!ins.ok) {
     return NextResponse.json({ error: "insert failed", detail: await ins.text() }, { status: 500 });
   }
-  return NextResponse.json({ stored: true, table_date: today, prices });
+  await refreshPages([`/fuel-prices/${today}`]);
+  return NextResponse.json({ stored: true, table_date: today, ipt_date: tableDate, prices });
 }

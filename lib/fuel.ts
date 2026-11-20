@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { supabaseHeaders } from "./supabase";
 
 export type FuelKey = "p95" | "p98" | "diesel" | "gas";
@@ -11,7 +11,7 @@ export type FuelPrices = {
 };
 
 export type PriceRow = FuelPrices & {
-  table_date: string; // YYYY-MM-DD, Beirut date when the table was first seen
+  table_date: string; // YYYY-MM-DD, date printed on the IPT table (or the day it was first seen)
   source: string;
 };
 
@@ -29,8 +29,11 @@ export const IPT_SOURCE_URL = "https://www.iptgroup.com.lb/ipt/en/home";
 // Approximate dollar rate used only for an indicative conversion.
 export const USD_RATE = 89500;
 
+/** Cache tag shared by every cached read of prices, revalidated by the daily cron. */
+export const FUEL_TAG = "fuel";
+
 /** Reads the price table published on the IPT Group home page. Not cached: callers cache. */
-export async function scrapeIptPrices(): Promise<FuelPrices> {
+export async function scrapeIptTable(): Promise<{ prices: FuelPrices; tableDate: string | null }> {
   const res = await fetch(IPT_SOURCE_URL, {
     headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
     cache: "no-store",
@@ -45,18 +48,31 @@ export async function scrapeIptPrices(): Promise<FuelPrices> {
     const n = parseInt(m[1].replace(/[^\d]/g, ""), 10);
     return Number.isFinite(n) ? n : null;
   };
-  return { p95: read("UNL 95"), p98: read("UNL 98"), diesel: read("Diesel"), gas: read("Gas (LPG)") };
+  const prices = { p95: read("UNL 95"), p98: read("UNL 98"), diesel: read("Diesel"), gas: read("Gas (LPG)") };
+  // IPT prints the table date as <div class="last-update-date">DD/MM/YYYY</div>
+  const d = html.match(/class="last-update-date"[^>]*>\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*</);
+  let tableDate: string | null = null;
+  if (d) {
+    const iso = `${d[3]}-${d[2].padStart(2, "0")}-${d[1].padStart(2, "0")}`;
+    if (!Number.isNaN(Date.parse(`${iso}T00:00:00Z`))) tableDate = iso;
+  }
+  return { prices, tableDate };
+}
+
+export async function scrapeIptPrices(): Promise<FuelPrices> {
+  return (await scrapeIptTable()).prices;
 }
 
 /** Current prices with the time they were read. Cached for about an hour. */
-export async function getCurrentPrices(): Promise<{ prices: FuelPrices; checkedAt: string }> {
+export async function getCurrentPrices(): Promise<{ prices: FuelPrices; tableDate: string | null; checkedAt: string }> {
   "use cache";
   cacheLife("hours");
+  cacheTag(FUEL_TAG);
   try {
-    const prices = await scrapeIptPrices();
-    return { prices, checkedAt: new Date().toISOString() };
+    const { prices, tableDate } = await scrapeIptTable();
+    return { prices, tableDate, checkedAt: new Date().toISOString() };
   } catch {
-    return { prices: { p95: null, p98: null, diesel: null, gas: null }, checkedAt: new Date().toISOString() };
+    return { prices: { p95: null, p98: null, diesel: null, gas: null }, tableDate: null, checkedAt: new Date().toISOString() };
   }
 }
 
@@ -67,6 +83,7 @@ const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export async function getPriceHistory(limit = 400): Promise<PriceRow[]> {
   "use cache";
   cacheLife("hours");
+  cacheTag(FUEL_TAG);
   if (!SUPABASE_URL || !SUPABASE_ANON) return [];
   try {
     const res = await fetch(

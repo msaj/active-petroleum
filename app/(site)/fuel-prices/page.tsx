@@ -9,6 +9,15 @@ export const metadata: Metadata = {
   description:
     "سعر صفيحة البنزين 95 و98 والمازوت وقارورة الغاز اليوم في لبنان، مع سجل كل جدول وتغيّر السعر عن الجدول اللي قبله. محدّث من جدول IPT.",
   alternates: { canonical: "/fuel-prices" },
+  openGraph: {
+    type: "website",
+    locale: "ar_LB",
+    siteName: "A.Petroleum",
+    url: "/fuel-prices",
+    title: "أسعار المحروقات اليوم في لبنان: البنزين والمازوت والغاز",
+    description: "سعر صفيحة البنزين 95 و98 والمازوت وقارورة الغاز اليوم، مع سجل كل جدول.",
+    images: [{ url: "/og.jpg", width: 1200, height: 630 }],
+  },
 };
 
 export default async function FuelPricesPage() {
