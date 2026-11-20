@@ -67,6 +67,11 @@ async function ServiceContent({ params }: { params: PageProps<"/services/[slug]"
         <h1 className="text-3xl sm:text-4xl font-black leading-[1.4]">{s.title}</h1>
         <p className="text-lg leading-9 text-slate-700">{s.intro}</p>
         <div className="flex flex-wrap gap-3 pt-1">
+          {s.slug === "ev-charging" && (
+            <Link href="/book-charging" className="bg-[#0B4F9F] hover:bg-blue-800 text-white font-black px-5 py-3 rounded-xl">
+              احجز شاحن
+            </Link>
+          )}
           <a href={waLink(s.cta.message)} target="_blank" rel="noopener" className="bg-[#F5B301] hover:bg-amber-400 text-slate-950 font-black px-5 py-3 rounded-xl">
             {s.cta.label}
           </a>
